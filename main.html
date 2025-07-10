@@ -19,12 +19,12 @@
     body{
       background-color: #141414;
     }
-    
+
     @font-face {
         font-family: MagdaCleanMono;
         src: url("MagdaCleanMono-Regular.woff") format("woff");
     }
-    
+
     .site-title {
       position: fixed;
       top: 4vh;
@@ -48,7 +48,7 @@
       letter-spacing: 0.01em;
       z-index: 10;
       user-select: none;
-      pointer-events: none;
+      cursor: pointer;
     }
 
     .contact-me {
@@ -58,7 +58,7 @@
       font-family: 'MagdaCleanMono', monospace;
       font-size: calc(var(--index) * 0.9);
       color: #a4a4a4;
-      letter-spacing: 0.01em;
+      letter-spacing: 0.001em;
       z-index: 10;
       user-select: none;
       pointer-events: none;
@@ -107,8 +107,6 @@
       transform: translateZ(calc(var(--index) * 10));
     }
 
-    /*Right*/
-
     .items .item:hover + *{
       filter: inherit;
       transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);
@@ -132,8 +130,6 @@
       transform: translateZ(calc(var(--index) * .6)) rotateY(15deg);
       z-index: -4;
     }
-
-    /*Left*/
 
     .items .item:has( + :hover){
       filter: inherit;
@@ -162,13 +158,58 @@
       transform: translateZ(calc(var(--index) * 10));
       margin: 0 .45vw;
     }
+
+    /* Lines */
+    .line {
+      position: fixed;
+      background-color: #a4a4a4;
+      z-index: 5;
+      transition: all 1s ease;
+    }
+
+    .line-horizontal {
+      height: 1px;
+      width: 0;
+    }
+
+    .line-vertical {
+      width: 1px;
+      height: 0;
+    }
+
+    .top-line {
+      top: 10vh;
+      left: 0;
+    }
+
+    .bottom-line {
+      bottom: 10ch;
+      left: 0;
+    }
+
+    .right-line {
+      top: 0;
+      right: 10vw;
+    }
+
+    .line-animate.line-horizontal {
+      width: 100vw;
+    }
+
+    .line-animate.line-vertical {
+      height: 100vh;
+    }
   </style>
 </head>
 <body>
   <div class="site-title">Sheron Yang</div>
   <div class="about-me">About</div>
   <div class="contact-me">Contact</div>
-  <div class="top-line"></div>
+
+  <div class="line line-horizontal top-line"></div>
+  <div class="line line-horizontal bottom-line"></div>
+  <div class="line line-vertical right-line"></div>
+
   <div class="wrapper">
     <div class="items">
       <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
@@ -184,5 +225,13 @@
       <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
     </div>
   </div>
+
+  <script>
+    document.querySelector(".about-me").addEventListener("click", () => {
+      document.querySelectorAll('.line').forEach(line => {
+        line.classList.add('line-animate');
+      });
+    });
+  </script>
 </body>
 </html>
