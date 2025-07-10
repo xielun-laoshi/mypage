@@ -9,7 +9,7 @@
     /* -------- Reset -------- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* -------- Font (placed early for faster download) -------- */
+    /* -------- Font -------- */
     @font-face {
       font-family: MagdaCleanMono;
       src: url("MagdaCleanMono-Regular.woff") format("woff");
@@ -20,7 +20,11 @@
       --transition: cubic-bezier(.1, .7, 0, 1);
     }
 
-    body { background: #141414; overflow-x: hidden; }
+    html, body {
+      background: #141414;
+      overflow: hidden;
+      height: 100%;
+    }
 
     .site-title,
     .about-me,
@@ -33,7 +37,7 @@
     }
 
     .site-title { position: fixed; top: 4vh; left: 2vw; pointer-events: none; }
-    .about-me   { position: fixed; top: 4vh; right: 2vw; cursor: pointer;   }
+    .about-me   { position: fixed; top: 4vh; right: 2vw; cursor: pointer; }
     .contact-me { position: fixed; top: 4vh; right: 10vw; pointer-events: none; }
 
     .main-content {
@@ -44,11 +48,22 @@
       justify-content: center;
       transition: width 1s ease;
     }
+
     .main-content.shrink { width: 70vw; }
 
     .wrapper { width: 100%; display: flex; align-items: center; justify-content: center; }
 
-    .items { display: flex; gap: .4rem; perspective: calc(var(--index) * 35); }
+    .items {
+      display: flex;
+      gap: .4rem;
+      perspective: calc(var(--index) * 35);
+      transition: transform 1s ease;
+      transform-origin: center;
+    }
+
+    .items.shrink {
+      transform: scaleX(0.85);
+    }
 
     .item {
       width: calc(var(--index) * 3.2);
@@ -62,6 +77,7 @@
       will-change: transform, filter, rotateY, width;
       position: relative;
     }
+
     .item::before,
     .item::after {
       content: "";
@@ -70,9 +86,9 @@
       width: 20px;
       right: calc(var(--index) * -1);
     }
+
     .item::after { left: calc(var(--index) * -1); }
 
-    /* -------- Hover / focus effects (child selector for performance) -------- */
     .items > .item:hover             { filter: inherit; transform: translateZ(calc(var(--index) * 10)); }
     .items > .item:hover + *         { filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);  z-index: -1; }
     .items > .item:hover + * + *     { filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);  z-index: -2; }
@@ -93,37 +109,35 @@
       margin: 0 .45vw;
     }
 
-    /* -------- Decorative lines -------- */
     .line {
       position: fixed;
       background: #a4a4a4;
       z-index: 10;
       transition: all 1s ease;
     }
+
     .line-horizontal { height: 1px; width: 0; }
     .top-line    { top: 10vh; right: 0; }
     .bottom-line { bottom: 10vh; right: 0; }
     .line-animate.line-horizontal { width: 100vw; }
 
-    /* -------- About panel (off-canvas, solid top & bottom stripes) -------- */
     .about-panel {
       position: fixed;
       top: 0;
       right: 0;
       height: 100vh;
       width: 30vw;
-      background: #141414;                 /* middle section */
+      background: #141414;
       color: #ccc;
-      border-left:#a4a4a4 solid 1px; /* left border */
+      border-left: #a4a4a4 solid 1px;
       font-family: "MagdaCleanMono", monospace;
       overflow: hidden;
       z-index: 8;
-
-      transform: translateX(100%);         /* hidden state */
+      transform: translateX(100%);
       padding: 0;
       transition: transform 0.8s ease, padding 0.8s ease;
     }
-    /* solid 10 % stripes */
+
     .about-panel::before,
     .about-panel::after {
       content: "";
@@ -134,7 +148,8 @@
       background: #1a1a1a;
       pointer-events: none;
     }
-    .about-panel::before { top: 0;    }
+
+    .about-panel::before { top: 0; }
     .about-panel::after  { bottom: 0; }
 
     .about-panel.show {
@@ -147,6 +162,7 @@
       transform: translateX(30%);
       transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s;
     }
+
     .about-panel.show .about-content {
       opacity: 1;
       transform: translateX(0);
@@ -183,7 +199,7 @@
   <div class="about-panel" id="aboutPanel">
     <div class="about-content">
       <h2></h2>
-      <p>Hello! I'm Sheron Yang, a creative technologist exploring the intersection of code, design, and storytelling.</p>
+      <p>I'm Sheron Yang. I reply to messages with memes and sometimes emojis. I make coffee. I'm also learning how to code.</p>
     </div>
   </div>
 
@@ -193,12 +209,25 @@
       const lines       = document.querySelectorAll('.line');
       const mainContent = document.getElementById('mainContent');
       const aboutPanel  = document.getElementById('aboutPanel');
+      const items       = document.querySelector('.items');
+
+      let aboutVisible = false;
 
       aboutBtn.addEventListener('click', () => {
-        lines.forEach(l => l.classList.add('line-animate'));
-        mainContent.classList.add('shrink');
-        aboutPanel.classList.add('show');
-      }, { once: true });
+        aboutVisible = !aboutVisible;
+
+        if (aboutVisible) {
+          lines.forEach(l => l.classList.add('line-animate'));
+          mainContent.classList.add('shrink');
+          aboutPanel.classList.add('show');
+          items.classList.add('shrink');
+        } else {
+          lines.forEach(l => l.classList.remove('line-animate'));
+          mainContent.classList.remove('shrink');
+          aboutPanel.classList.remove('show');
+          items.classList.remove('shrink');
+        }
+      });
     });
   </script>
 </body>
