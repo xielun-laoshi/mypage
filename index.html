@@ -5,6 +5,7 @@
   <title>Sheron's</title>
   <link rel="shortcut icon" type="image/x-icon" href="S.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <style>
     * {
       margin: 0;
@@ -22,13 +23,16 @@
       --transition: cubic-bezier(.1, .7, 0, 1);
     }
 
-    html, body {
+    html,
+    body {
       background: #141414;
       overflow: hidden;
       height: 100%;
     }
 
-    .site-title, .about-me, .contact-me {
+    .site-title,
+    .about-me,
+    .contact-me {
       font-family: "MagdaCleanMono", monospace;
       font-size: calc(var(--index) * 0.9);
       color: #a4a4a4;
@@ -43,14 +47,12 @@
       pointer-events: auto;
       cursor: pointer;
     }
-
     .about-me {
       position: fixed;
       top: 4vh;
       right: 2vw;
       cursor: pointer;
     }
-
     .contact-me {
       position: fixed;
       top: 4vh;
@@ -91,18 +93,20 @@
     }
 
     .item {
-      width: calc(var(--index) * 4.5);
+      width: calc(var(--index) * 3.2);
       height: calc(var(--index) * 14);
       background: #222 center/cover;
       cursor: pointer;
       filter: grayscale(1) brightness(0.5);
-      transition: transform 1.25s var(--transition), filter 3s var(--transition), width 1.25s var(--transition);
+      transition: transform 1.25s var(--transition),
+        filter 3s var(--transition),
+        width 1.25s var(--transition);
       will-change: transform, filter, rotateY, width;
       position: relative;
-      overflow: hidden;
     }
 
-    .item::before, .item::after {
+    .item::before,
+    .item::after {
       content: "";
       position: absolute;
       height: 100%;
@@ -118,25 +122,21 @@
       filter: inherit;
       transform: translateZ(calc(var(--index) * 10));
     }
-
     .items > .item:hover + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);
       z-index: -1;
     }
-
     .items > .item:hover + * + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);
       z-index: -2;
     }
-
     .items > .item:hover + * + * + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg);
       z-index: -3;
     }
-
     .items > .item:hover + * + * + * + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 0.6)) rotateY(15deg);
@@ -147,23 +147,21 @@
       filter: inherit;
       transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg);
     }
-
     .items > .item:has(+ * + :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg);
     }
-
     .items > .item:has(+ * + * + :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg);
     }
-
     .items > .item:has(+ * + * + * + :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 0.6)) rotateY(-15deg);
     }
 
-    .item.active {
+    .items > .item:active,
+    .items > .item:focus {
       width: 28vw;
       filter: inherit;
       z-index: 100;
@@ -187,17 +185,14 @@
       height: 1px;
       width: 0;
     }
-
     .top-line {
       top: 10vh;
       right: 0;
     }
-
     .bottom-line {
       bottom: 10vh;
       right: 0;
     }
-
     .line-animate.line-horizontal {
       width: 100vw;
     }
@@ -219,7 +214,8 @@
       transition: transform 0.8s ease, padding 0.8s ease;
     }
 
-    .about-panel::before, .about-panel::after {
+    .about-panel::before,
+    .about-panel::after {
       content: "";
       position: absolute;
       left: 0;
@@ -232,7 +228,6 @@
     .about-panel::before {
       top: 0;
     }
-
     .about-panel::after {
       bottom: 0;
     }
@@ -254,6 +249,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="site-title" tabindex="0">Sheron Yang</div>
   <div class="about-me" tabindex="0">About</div>
@@ -265,37 +261,56 @@
   <div class="main-content" id="mainContent">
     <div class="wrapper">
       <div class="items">
-        <div class="item" tabindex="0"
-          style="background-image: url('whack2025.jpg')"
-          data-video="whack2025.mp4"
-          data-link="https://www.wellesleyhacks.org/"></div>
-
-        <div class="item" tabindex="0"
-          style="background-image: url('whack2025.jpg')"
-          data-video="whack2025.mp4"
-          data-link="https://www.wellesleyhacks.org/"></div>
-
-        <div class="item" tabindex="0"
-          style="background-image: url('whack2025.jpg')"
-          data-video="whack2025.mp4"
-          data-link="https://www.wellesleyhacks.org/"></div>
-
-        <div class="item" tabindex="0"
-          style="background-image: url('whack2025.jpg')"
-          data-video="whack2025.mp4"
-          data-link="https://www.wellesleyhacks.org/"></div>
-
-        <div class="item" tabindex="0"
-          style="background-image: url('whack2025.jpg')"
-          data-video="whack2025.mp4"
-          data-link="https://www.wellesleyhacks.org/"></div>
-
-        <div class="item" tabindex="0"
-          style="background-image: url('whack2025.jpg')"
-          data-video="whack2025.mp4"
-          data-link="https://www.wellesleyhacks.org/"></div>
-          
-
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/21_wbsty7.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/1_zlqnwl.jpg)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/16_epnmqm.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/Screenshot_23_8_nbzwdm.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/29_jbd4di.jpg)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/14_zkwtff.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/8_ucihr5.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/18_bguamv.png)"
+        ></div>
+        <div
+          class="item"
+          tabindex="0"
+          style="background-image:url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"
+        ></div>
       </div>
     </div>
   </div>
@@ -314,9 +329,21 @@
     <div class="about-content">
       <h2></h2>
       <p>
-        <a href="https://www.linkedin.com/in/sheron-yang-63833a329/" target="_blank" rel="noopener noreferrer">Linkedin</a><br />
-        <a href="https://github.com/xielun-laoshi" target="_blank" rel="noopener noreferrer">Github</a><br />
-        <a href="mailto:xy100@wellesley.edu" target="_blank" rel="noopener noreferrer">Mail</a>
+        <a
+          href="https://www.linkedin.com/in/sheron-yang-63833a329/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Linkedin</a
+        ><br />
+        <a
+          href="https://github.com/xielun-laoshi"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Github</a
+        ><br />
+        <a href="mailto:xy100@wellesley.edu" target="_blank" rel="noopener noreferrer"
+          >Mail</a
+        >
       </p>
     </div>
   </div>
@@ -331,32 +358,47 @@
       const aboutPanel = document.getElementById("aboutPanel");
       const contactPanel = document.getElementById("contactPanel");
       const items = document.querySelector(".items");
-      const itemElements = document.querySelectorAll(".item");
 
       let aboutVisible = false;
       let contactVisible = false;
-      let activeItem = null;
 
-      function togglePanel(panelType) {
-        const isAbout = panelType === "about";
-        const show = isAbout ? !aboutVisible : !contactVisible;
+      aboutBtn.addEventListener("click", () => {
+        aboutVisible = !aboutVisible;
+        contactVisible = false;
 
-        aboutVisible = isAbout && show;
-        contactVisible = !isAbout && show;
+        if (aboutVisible) {
+          lines.forEach((l) => l.classList.add("line-animate"));
+          mainContent.classList.add("shrink");
+          aboutPanel.classList.add("show");
+          contactPanel.classList.remove("show");
+          items.classList.add("shrink");
+        } else {
+          lines.forEach((l) => l.classList.remove("line-animate"));
+          mainContent.classList.remove("shrink");
+          aboutPanel.classList.remove("show");
+          items.classList.remove("shrink");
+        }
+      });
 
-        lines.forEach((l) => l.classList.toggle("line-animate", show));
-        mainContent.classList.toggle("shrink", show);
-        items.classList.toggle("shrink", show);
-        aboutPanel.classList.toggle("show", aboutVisible);
-        contactPanel.classList.toggle("show", contactVisible);
-      }
+      contactBtn.addEventListener("click", () => {
+        contactVisible = !contactVisible;
+        aboutVisible = false;
 
-      aboutBtn.addEventListener("click", () => togglePanel("about"));
-      contactBtn.addEventListener("click", () => togglePanel("contact"));
+        if (contactVisible) {
+          lines.forEach((l) => l.classList.add("line-animate"));
+          mainContent.classList.add("shrink");
+          contactPanel.classList.add("show");
+          aboutPanel.classList.remove("show");
+          items.classList.add("shrink");
+        } else {
+          lines.forEach((l) => l.classList.remove("line-animate"));
+          mainContent.classList.remove("shrink");
+          contactPanel.classList.remove("show");
+          items.classList.remove("shrink");
+        }
+      });
 
       siteTitle.addEventListener("click", () => {
-        if (!aboutVisible && !contactVisible && !activeItem) return;
-
         aboutVisible = false;
         contactVisible = false;
 
@@ -365,67 +407,8 @@
         aboutPanel.classList.remove("show");
         contactPanel.classList.remove("show");
         items.classList.remove("shrink");
-
-        itemElements.forEach((i) => {
-          i.classList.remove("active");
-          const v = i.querySelector("video");
-          if (v) v.remove();
-          const img = i.getAttribute("data-img");
-          if (img) i.style.backgroundImage = `url(${img})`;
-        });
-
-        activeItem = null;
-      });
-
-      itemElements.forEach((item) => {
-        item.addEventListener("click", () => {
-          if (activeItem === item) {
-            const link = item.getAttribute("data-link");
-            if (link) window.open(link, "_blank");
-            return;
-          }
-
-          // Reset all items
-          itemElements.forEach((i) => {
-            i.classList.remove("active");
-            const v = i.querySelector("video");
-            if (v) v.remove();
-            const img = i.getAttribute("data-img");
-            if (img) i.style.backgroundImage = `url(${img})`;
-          });
-
-          // Set current item as active
-          item.classList.add("active");
-          activeItem = item;
-
-          const videoUrl = item.getAttribute("data-video");
-          const imgUrl = item.style.backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
-          if (imgUrl) item.setAttribute("data-img", imgUrl);
-
-          if (videoUrl) {
-            const video = document.createElement("video");
-            video.src = videoUrl;
-            Object.assign(video, {
-              autoplay: true,
-              loop: true,
-              muted: true,
-              playsInline: true
-            });
-            Object.assign(video.style, {
-              position: "absolute",
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              top: 0,
-              left: 0
-            });
-            item.appendChild(video);
-            item.style.backgroundImage = "none";
-          }
-        });
       });
     });
   </script>
-
 </body>
 </html>
