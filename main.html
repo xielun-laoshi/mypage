@@ -191,24 +191,36 @@
 
 
     .about-panel {
-      position: fixed;
-      top: 0;
-      right: 0;
-      height: 100vh;
-      width: 0;
-      background-color: #1a1a1a;
-      color: #ccc;
-      font-family: 'MagdaCleanMono', monospace;
-      padding: 11vh 2vw 2vh;
-      overflow: hidden;
-      transition: width 1s ease, padding 1s ease;
-      z-index: 8;
+        position: fixed;
+        top: 0;
+        right: 0;
+        height: 100vh;
+        width: 0;
+        background-color: #141414;
+        color: #ccc;
+        font-family: 'MagdaCleanMono', monospace;
+        overflow: hidden;
+        transition: width 1s ease;
+        z-index: 8;
+        padding: 15vh 4vw 2vh 4vw;
+    }
+
+    .about-content {
+        transform: translateX(100%);
+        opacity: 0;
+        transition: transform 1s ease, opacity 1s ease;
     }
 
     .about-panel.show {
-      width: 30vw;
-      padding: 4vh 2vw;
+        width: 30vw;
     }
+
+    .about-panel.show .about-content {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+
   </style>
 </head>
 <body>
@@ -237,10 +249,13 @@
     </div>
   </div>
 
-  <div class="about-panel" id="aboutPanel">
+<div class="about-panel" id="aboutPanel">
+  <div class="about-content">
     <h2></h2>
     <p>Hello! I'm Sheron Yang, a creative technologist exploring the intersection of code, design, and storytelling.</p>
   </div>
+</div>
+
 
   <script>
     document.querySelector(".about-me").addEventListener("click", () => {
