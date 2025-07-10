@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Sheron's</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root{
+      --index: calc(1vw + 1vh);
+      --transition: cubic-bezier(.1, .7, 0, 1);
+    }
+
+    body{
+      background-color: #141414;
+    }
+    
+    @font-face {
+        font-family: MagdaCleanMono;
+        src: url("MagdaCleanMono-Regular.woff") format("woff");
+    }
+    
+    .site-title {
+      position: fixed;
+      top: 4vh;
+      left: 2vw;
+      font-family: 'MagdaCleanMono', monospace;
+      font-size: calc(var(--index) * 1);
+      color: #a4a4a4;
+      letter-spacing: 0.01em;
+      z-index: 10;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    /*.top-line {
+      position: fixed;
+      top: 10vh;
+      left: 0;
+      width: 100vw;
+      height: 0.15px;
+      background: #a4a4a4;
+      z-index: 1;
+    } */
+
+    .wrapper{
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+    }
+
+    .items{
+      display: flex;
+      gap: 0.4rem;
+      perspective: calc(var(--index) * 35);
+    }
+
+    .item{
+      width: calc(var(--index) * 3.2);
+      height: calc(var(--index) * 14);
+      background-color: #222;
+      background-size: cover;
+      background-position: center;
+      cursor: pointer;
+      filter: grayscale(1) brightness(.5);
+      transition: transform 1.25s var(--transition), filter 3s var(--transition), width 1.25s var(--transition);
+      will-change: transform, filter, rotateY, width;
+      position: relative;
+    }
+
+    .item::before, .item::after{
+      content: '';
+      position: absolute;
+      height: 100%;
+      width: 20px;
+      right: calc(var(--index) * -1);
+    }
+
+    .item::after{
+      left: calc(var(--index) * -1);
+    }
+
+    .items .item:hover{
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 10));
+    }
+
+    /*Right*/
+
+    .items .item:hover + *{
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);
+      z-index: -1;
+    }
+
+    .items .item:hover + * + *{
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);
+      z-index: -2;
+    }
+
+    .items .item:hover + * + * + *{
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg);
+      z-index: -3;
+    }
+
+    .items .item:hover + * + * + * + *{
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * .6)) rotateY(15deg);
+      z-index: -4;
+    }
+
+    /*Left*/
+
+    .items .item:has( + :hover){
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg);
+    }
+
+    .items .item:has( + * + :hover){
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg);
+    }
+
+    .items .item:has( + * + * + :hover){
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg);
+    }
+
+    .items .item:has( + * + * + * + :hover){
+      filter: inherit;
+      transform: translateZ(calc(var(--index) * .6)) rotateY(-15deg);
+    }
+
+    .items .item:active, .items .item:focus {
+      width: 28vw;
+      filter: inherit;
+      z-index: 100;
+      transform: translateZ(calc(var(--index) * 10));
+      margin: 0 .45vw;
+    }
+  </style>
+</head>
+<body>
+  <div class="site-title">Sheron Yang</div>
+  <div class="top-line"></div>
+  <div class="wrapper">
+    <div class="items">
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/21_wbsty7.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/1_zlqnwl.jpg)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/16_epnmqm.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_23_8_nbzwdm.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/29_jbd4di.jpg)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/14_zkwtff.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/8_ucihr5.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/18_bguamv.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
+      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/11_p1oi8m.png)"></div>
+    </div>
+  </div>
+</body>
+</html>
