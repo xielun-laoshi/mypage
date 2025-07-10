@@ -30,7 +30,7 @@
       top: 4vh;
       left: 2vw;
       font-family: 'MagdaCleanMono', monospace;
-      font-size: calc(var(--index) * 1);
+      font-size: calc(var(--index) * 0.9);
       color: #a4a4a4;
       letter-spacing: 0.01em;
       z-index: 10;
@@ -38,15 +38,31 @@
       pointer-events: none;
     }
 
-    /*.top-line {
+    .about-me {
       position: fixed;
-      top: 10vh;
-      left: 0;
-      width: 100vw;
-      height: 0.15px;
-      background: #a4a4a4;
-      z-index: 1;
-    } */
+      top: 4vh;
+      right: 2vw;
+      font-family: 'MagdaCleanMono', monospace;
+      font-size: calc(var(--index) * 0.9);
+      color: #a4a4a4;
+      letter-spacing: 0.01em;
+      z-index: 10;
+      user-select: none;
+      pointer-events: none;
+    }
+
+    .contact-me {
+      position: fixed;
+      top: 4vh;
+      right: 10vw;
+      font-family: 'MagdaCleanMono', monospace;
+      font-size: calc(var(--index) * 0.9);
+      color: #a4a4a4;
+      letter-spacing: 0.01em;
+      z-index: 10;
+      user-select: none;
+      pointer-events: none;
+    }
 
     .wrapper{
       display: flex;
@@ -150,6 +166,8 @@
 </head>
 <body>
   <div class="site-title">Sheron Yang</div>
+  <div class="about-me">About</div>
+  <div class="contact-me">Contact</div>
   <div class="top-line"></div>
   <div class="wrapper">
     <div class="items">
@@ -164,7 +182,6 @@
       <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/18_bguamv.png)"></div>
       <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"></div>
       <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/11_p1oi8m.png)"></div>
     </div>
   </div>
 </body>
