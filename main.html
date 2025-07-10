@@ -6,10 +6,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
-    /* -------- Reset -------- */
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    /* -------- Font -------- */
     @font-face {
       font-family: MagdaCleanMono;
       src: url("MagdaCleanMono-Regular.woff") format("woff");
@@ -38,7 +36,7 @@
 
     .site-title { position: fixed; top: 4vh; left: 2vw; pointer-events: none; }
     .about-me   { position: fixed; top: 4vh; right: 2vw; cursor: pointer; }
-    .contact-me { position: fixed; top: 4vh; right: 10vw; pointer-events: none; }
+    .contact-me { position: fixed; top: 4vh; right: 10vw; cursor: pointer; }
 
     .main-content {
       width: 100vw;
@@ -199,32 +197,67 @@
   <div class="about-panel" id="aboutPanel">
     <div class="about-content">
       <h2></h2>
-      <p>I'm Sheron Yang. I reply to messages with memes and sometimes emojis. I make coffee. I'm also learning how to code.</p>
+      <p>I'm Sheron Yang. I reply to messages with memes and sometimes emojis. I make coffee. I'm also learning how to learn.</p>
     </div>
   </div>
 
+<div class="about-panel contact-panel" id="contactPanel">
+    <div class="about-content">
+        <h2></h2>
+        <p>
+        <a href="https://www.linkedin.com/in/sheron-yang-63833a329/" target="_blank" rel="noopener noreferrer">Linkedin</a><br>
+        <a href="https://github.com/xielun-laoshi" target="_blank" rel="noopener noreferrer">Github</a><br>
+        <a href="mailto:xy100@wellesley.edu" target="_blank" rel="noopener noreferrer">Mail</a>
+        </p>
+    </div>
+</div>
+
+
   <script>
     document.addEventListener('DOMContentLoaded', () => {
-      const aboutBtn    = document.querySelector('.about-me');
-      const lines       = document.querySelectorAll('.line');
-      const mainContent = document.getElementById('mainContent');
-      const aboutPanel  = document.getElementById('aboutPanel');
-      const items       = document.querySelector('.items');
+      const aboutBtn     = document.querySelector('.about-me');
+      const contactBtn   = document.querySelector('.contact-me');
+      const lines        = document.querySelectorAll('.line');
+      const mainContent  = document.getElementById('mainContent');
+      const aboutPanel   = document.getElementById('aboutPanel');
+      const contactPanel = document.getElementById('contactPanel');
+      const items        = document.querySelector('.items');
 
       let aboutVisible = false;
+      let contactVisible = false;
 
       aboutBtn.addEventListener('click', () => {
         aboutVisible = !aboutVisible;
+        contactVisible = false;
 
         if (aboutVisible) {
           lines.forEach(l => l.classList.add('line-animate'));
           mainContent.classList.add('shrink');
           aboutPanel.classList.add('show');
+          contactPanel.classList.remove('show');
           items.classList.add('shrink');
         } else {
           lines.forEach(l => l.classList.remove('line-animate'));
           mainContent.classList.remove('shrink');
           aboutPanel.classList.remove('show');
+          items.classList.remove('shrink');
+        }
+      });
+
+      contactBtn.addEventListener('click', () => {
+        contactVisible = !contactVisible;
+        aboutVisible = false;
+
+        if (contactVisible) {
+          lines.forEach(l => l.classList.add('line-animate'));
+          mainContent.classList.add('shrink');
+          contactPanel.classList.add('show');
+          aboutPanel.classList.remove('show');
+          items.classList.add('shrink');
+        } else {
+          lines.forEach(l => l.classList.remove('line-animate'));
+          mainContent.classList.remove('shrink');
+          contactPanel.classList.remove('show');
           items.classList.remove('shrink');
         }
       });
