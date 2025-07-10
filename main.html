@@ -11,30 +11,33 @@
       box-sizing: border-box;
     }
 
-    :root{
+    :root {
       --index: calc(1vw + 1vh);
       --transition: cubic-bezier(.1, .7, 0, 1);
     }
 
-    body{
+    body {
       background-color: #141414;
+      overflow-x: hidden;
     }
 
     @font-face {
-        font-family: MagdaCleanMono;
-        src: url("MagdaCleanMono-Regular.woff") format("woff");
+      font-family: MagdaCleanMono;
+      src: url("MagdaCleanMono-Regular.woff") format("woff");
+    }
+
+    .site-title, .about-me, .contact-me {
+      font-family: 'MagdaCleanMono', monospace;
+      font-size: calc(var(--index) * 0.9);
+      color: #a4a4a4;
+      z-index: 10;
+      user-select: none;
     }
 
     .site-title {
       position: fixed;
       top: 4vh;
       left: 2vw;
-      font-family: 'MagdaCleanMono', monospace;
-      font-size: calc(var(--index) * 0.9);
-      color: #a4a4a4;
-      letter-spacing: 0.01em;
-      z-index: 10;
-      user-select: none;
       pointer-events: none;
     }
 
@@ -42,12 +45,6 @@
       position: fixed;
       top: 4vh;
       right: 2vw;
-      font-family: 'MagdaCleanMono', monospace;
-      font-size: calc(var(--index) * 0.9);
-      color: #a4a4a4;
-      letter-spacing: 0.01em;
-      z-index: 10;
-      user-select: none;
       cursor: pointer;
     }
 
@@ -55,29 +52,36 @@
       position: fixed;
       top: 4vh;
       right: 10vw;
-      font-family: 'MagdaCleanMono', monospace;
-      font-size: calc(var(--index) * 0.9);
-      color: #a4a4a4;
-      letter-spacing: 0.001em;
-      z-index: 10;
-      user-select: none;
       pointer-events: none;
     }
 
-    .wrapper{
+    .main-content {
+      width: 100vw;
+      height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      height: 100vh;
+      transition: width 1s ease;
     }
 
-    .items{
+    .main-content.shrink {
+      width: 70vw;
+    }
+
+    .wrapper {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .items {
       display: flex;
       gap: 0.4rem;
       perspective: calc(var(--index) * 35);
     }
 
-    .item{
+    .item {
       width: calc(var(--index) * 3.2);
       height: calc(var(--index) * 14);
       background-color: #222;
@@ -90,7 +94,7 @@
       position: relative;
     }
 
-    .item::before, .item::after{
+    .item::before, .item::after {
       content: '';
       position: absolute;
       height: 100%;
@@ -98,55 +102,55 @@
       right: calc(var(--index) * -1);
     }
 
-    .item::after{
+    .item::after {
       left: calc(var(--index) * -1);
     }
 
-    .items .item:hover{
+    .items .item:hover {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 10));
     }
 
-    .items .item:hover + *{
+    .items .item:hover + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);
       z-index: -1;
     }
 
-    .items .item:hover + * + *{
+    .items .item:hover + * + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);
       z-index: -2;
     }
 
-    .items .item:hover + * + * + *{
+    .items .item:hover + * + * + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg);
       z-index: -3;
     }
 
-    .items .item:hover + * + * + * + *{
+    .items .item:hover + * + * + * + * {
       filter: inherit;
       transform: translateZ(calc(var(--index) * .6)) rotateY(15deg);
       z-index: -4;
     }
 
-    .items .item:has( + :hover){
+    .items .item:has(+ :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg);
     }
 
-    .items .item:has( + * + :hover){
+    .items .item:has(+ * + :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg);
     }
 
-    .items .item:has( + * + * + :hover){
+    .items .item:has(+ * + * + :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg);
     }
 
-    .items .item:has( + * + * + * + :hover){
+    .items .item:has(+ * + * + * + :hover) {
       filter: inherit;
       transform: translateZ(calc(var(--index) * .6)) rotateY(-15deg);
     }
@@ -159,22 +163,16 @@
       margin: 0 .45vw;
     }
 
-    /* Lines */
     .line {
       position: fixed;
       background-color: #a4a4a4;
-      z-index: 5;
+      z-index: 10;
       transition: all 1s ease;
     }
 
     .line-horizontal {
       height: 1px;
       width: 0;
-    }
-
-    .line-vertical {
-      width: 1px;
-      height: 0;
     }
 
     .top-line {
@@ -187,17 +185,29 @@
       left: 0;
     }
 
-    .right-line {
-      top: 0;
-      right: 10vw;
-    }
-
     .line-animate.line-horizontal {
       width: 100vw;
     }
 
-    .line-animate.line-vertical {
+
+    .about-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
       height: 100vh;
+      width: 0;
+      background-color: #1a1a1a;
+      color: #ccc;
+      font-family: 'MagdaCleanMono', monospace;
+      padding: 11vh 2vw 2vh;
+      overflow: hidden;
+      transition: width 1s ease, padding 1s ease;
+      z-index: 8;
+    }
+
+    .about-panel.show {
+      width: 30vw;
+      padding: 4vh 2vw;
     }
   </style>
 </head>
@@ -208,22 +218,28 @@
 
   <div class="line line-horizontal top-line"></div>
   <div class="line line-horizontal bottom-line"></div>
-  <div class="line line-vertical right-line"></div>
 
-  <div class="wrapper">
-    <div class="items">
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/21_wbsty7.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/1_zlqnwl.jpg)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/16_epnmqm.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_23_8_nbzwdm.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/29_jbd4di.jpg)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/14_zkwtff.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/8_ucihr5.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/18_bguamv.png)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"></div>
-      <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
+  <div class="main-content" id="mainContent">
+    <div class="wrapper">
+      <div class="items">
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/21_wbsty7.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/1_zlqnwl.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/16_epnmqm.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_23_8_nbzwdm.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/29_jbd4di.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/14_zkwtff.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/8_ucihr5.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/18_bguamv.png)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
+      </div>
     </div>
+  </div>
+
+  <div class="about-panel" id="aboutPanel">
+    <h2></h2>
+    <p>Hello! I'm Sheron Yang, a creative technologist exploring the intersection of code, design, and storytelling.</p>
   </div>
 
   <script>
@@ -231,6 +247,8 @@
       document.querySelectorAll('.line').forEach(line => {
         line.classList.add('line-animate');
       });
+      document.getElementById('mainContent').classList.add('shrink');
+      document.getElementById('aboutPanel').classList.add('show');
     });
   </script>
 </body>
