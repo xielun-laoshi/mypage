@@ -4,11 +4,15 @@
   <meta charset="UTF-8">
   <title>Sheron's</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
+    /* -------- Reset -------- */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* -------- Font (placed early for faster download) -------- */
+    @font-face {
+      font-family: MagdaCleanMono;
+      src: url("MagdaCleanMono-Regular.woff") format("woff");
     }
 
     :root {
@@ -16,44 +20,21 @@
       --transition: cubic-bezier(.1, .7, 0, 1);
     }
 
-    body {
-      background-color: #141414;
-      overflow-x: hidden;
-    }
+    body { background: #141414; overflow-x: hidden; }
 
-    @font-face {
-      font-family: MagdaCleanMono;
-      src: url("MagdaCleanMono-Regular.woff") format("woff");
-    }
-
-    .site-title, .about-me, .contact-me {
-      font-family: 'MagdaCleanMono', monospace;
+    .site-title,
+    .about-me,
+    .contact-me {
+      font-family: "MagdaCleanMono", monospace;
       font-size: calc(var(--index) * 0.9);
       color: #a4a4a4;
-      z-index: 10;
       user-select: none;
+      z-index: 10;
     }
 
-    .site-title {
-      position: fixed;
-      top: 4vh;
-      left: 2vw;
-      pointer-events: none;
-    }
-
-    .about-me {
-      position: fixed;
-      top: 4vh;
-      right: 2vw;
-      cursor: pointer;
-    }
-
-    .contact-me {
-      position: fixed;
-      top: 4vh;
-      right: 10vw;
-      pointer-events: none;
-    }
+    .site-title { position: fixed; top: 4vh; left: 2vw; pointer-events: none; }
+    .about-me   { position: fixed; top: 4vh; right: 2vw; cursor: pointer;   }
+    .contact-me { position: fixed; top: 4vh; right: 10vw; pointer-events: none; }
 
     .main-content {
       width: 100vw;
@@ -63,99 +44,48 @@
       justify-content: center;
       transition: width 1s ease;
     }
+    .main-content.shrink { width: 70vw; }
 
-    .main-content.shrink {
-      width: 70vw;
-    }
+    .wrapper { width: 100%; display: flex; align-items: center; justify-content: center; }
 
-    .wrapper {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .items {
-      display: flex;
-      gap: 0.4rem;
-      perspective: calc(var(--index) * 35);
-    }
+    .items { display: flex; gap: .4rem; perspective: calc(var(--index) * 35); }
 
     .item {
       width: calc(var(--index) * 3.2);
       height: calc(var(--index) * 14);
-      background-color: #222;
-      background-size: cover;
-      background-position: center;
+      background: #222 center/cover;
       cursor: pointer;
       filter: grayscale(1) brightness(.5);
-      transition: transform 1.25s var(--transition), filter 3s var(--transition), width 1.25s var(--transition);
+      transition: transform 1.25s var(--transition),
+                  filter    3s    var(--transition),
+                  width     1.25s var(--transition);
       will-change: transform, filter, rotateY, width;
       position: relative;
     }
-
-    .item::before, .item::after {
-      content: '';
+    .item::before,
+    .item::after {
+      content: "";
       position: absolute;
       height: 100%;
       width: 20px;
       right: calc(var(--index) * -1);
     }
+    .item::after { left: calc(var(--index) * -1); }
 
-    .item::after {
-      left: calc(var(--index) * -1);
-    }
+    /* -------- Hover / focus effects (child selector for performance) -------- */
+    .items > .item:hover             { filter: inherit; transform: translateZ(calc(var(--index) * 10)); }
+    .items > .item:hover + *         { filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);  z-index: -1; }
+    .items > .item:hover + * + *     { filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);  z-index: -2; }
+    .items > .item:hover + * + * + * { filter: inherit; transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg);  z-index: -3; }
+    .items > .item:hover + * + * + * + * { filter: inherit; transform: translateZ(calc(var(--index) * .6)) rotateY(15deg); z-index: -4; }
 
-    .items .item:hover {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 10));
-    }
+    .items > .item:has(+ :hover)             { filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg); }
+    .items > .item:has(+ * + :hover)         { filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg); }
+    .items > .item:has(+ * + * + :hover)     { filter: inherit; transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg); }
+    .items > .item:has(+ * + * + * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * .6)) rotateY(-15deg); }
 
-    .items .item:hover + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);
-      z-index: -1;
-    }
-
-    .items .item:hover + * + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);
-      z-index: -2;
-    }
-
-    .items .item:hover + * + * + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg);
-      z-index: -3;
-    }
-
-    .items .item:hover + * + * + * + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * .6)) rotateY(15deg);
-      z-index: -4;
-    }
-
-    .items .item:has(+ :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg);
-    }
-
-    .items .item:has(+ * + :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg);
-    }
-
-    .items .item:has(+ * + * + :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg);
-    }
-
-    .items .item:has(+ * + * + * + :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * .6)) rotateY(-15deg);
-    }
-
-    .items .item:active, .items .item:focus {
+    .items > .item:active,
+    .items > .item:focus {
       width: 28vw;
       filter: inherit;
       z-index: 100;
@@ -163,66 +93,54 @@
       margin: 0 .45vw;
     }
 
+    /* -------- Decorative lines -------- */
     .line {
       position: fixed;
-      background-color: #a4a4a4;
+      background: #a4a4a4;
       z-index: 10;
       transition: all 1s ease;
     }
+    .line-horizontal { height: 1px; width: 0; }
+    .top-line    { top: 10vh; left: 0; }
+    .bottom-line { bottom: 10ch; left: 0; }
+    .line-animate.line-horizontal { width: 100vw; }
 
-    .line-horizontal {
-      height: 1px;
-      width: 0;
-    }
-
-    .top-line {
-      top: 10vh;
-      left: 0;
-    }
-
-    .bottom-line {
-      bottom: 10ch;
-      left: 0;
-    }
-
-    .line-animate.line-horizontal {
-      width: 100vw;
-    }
-
-
+    /* -------- About panel (off-canvas, slides in) -------- */
     .about-panel {
-        position: fixed;
-        top: 0;
-        right: 0;
-        height: 100vh;
-        width: 0;
-        background-color: #141414;
-        color: #ccc;
-        font-family: 'MagdaCleanMono', monospace;
-        overflow: hidden;
-        transition: width 1s ease;
-        z-index: 8;
-        padding: 15vh 4vw 2vh 4vw;
-    }
+      position: fixed;
+      top: 0;
+      right: 0;
+      height: 100vh;
+      width: 30vw;                /* natural width */
+      background: #141414;
+      color: #ccc;
+      font-family: "MagdaCleanMono", monospace;
+      overflow: hidden;
+      z-index: 8;
 
-    .about-content {
-        transform: translateX(100%);
-        opacity: 0;
-        transition: transform 1s ease, opacity 1s ease;
+      /* hidden state */
+      transform: translateX(100%); /* push entire panel out of view */
+      padding: 0;                 /* no padding so nothing peeks */
+      transition: transform 0.8s ease, padding 0.8s ease;
     }
-
     .about-panel.show {
-        width: 30vw;
+      transform: translateX(0);            /* slide in */
+      padding: 15vh 4vw 2vh 4vw;           /* add inner spacing */
     }
 
+    /* inner content fades/slides after panel arrives */
+    .about-content {
+      opacity: 0;
+      transform: translateX(30%);
+      transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s;
+    }
     .about-panel.show .about-content {
-        transform: translateX(0);
-        opacity: 1;
+      opacity: 1;
+      transform: translateX(0);
     }
-
-
   </style>
 </head>
+
 <body>
   <div class="site-title">Sheron Yang</div>
   <div class="about-me">About</div>
@@ -234,36 +152,40 @@
   <div class="main-content" id="mainContent">
     <div class="wrapper">
       <div class="items">
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/21_wbsty7.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/1_zlqnwl.jpg)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/16_epnmqm.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_23_8_nbzwdm.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/29_jbd4di.jpg)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/14_zkwtff.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/8_ucihr5.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/18_bguamv.png)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"></div>
-        <div class="item" tabindex="0" style="background-image: url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/21_wbsty7.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/1_zlqnwl.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/16_epnmqm.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/Screenshot_23_8_nbzwdm.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/29_jbd4di.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/14_zkwtff.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/8_ucihr5.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/18_bguamv.png)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/Screenshot_18_4_mscxmr.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/2_zja2bq.png)"></div>
       </div>
     </div>
   </div>
 
-<div class="about-panel" id="aboutPanel">
-  <div class="about-content">
-    <h2></h2>
-    <p>Hello! I'm Sheron Yang, a creative technologist exploring the intersection of code, design, and storytelling.</p>
+  <div class="about-panel" id="aboutPanel">
+    <div class="about-content">
+      <h2></h2>
+      <p>Hello! I'm Sheron Yang, a creative technologist exploring the intersection of code, design, and storytelling.</p>
+    </div>
   </div>
-</div>
-
 
   <script>
-    document.querySelector(".about-me").addEventListener("click", () => {
-      document.querySelectorAll('.line').forEach(line => {
-        line.classList.add('line-animate');
-      });
-      document.getElementById('mainContent').classList.add('shrink');
-      document.getElementById('aboutPanel').classList.add('show');
+    document.addEventListener('DOMContentLoaded', () => {
+      const aboutBtn    = document.querySelector('.about-me');
+      const lines       = document.querySelectorAll('.line');
+      const mainContent = document.getElementById('mainContent');
+      const aboutPanel  = document.getElementById('aboutPanel');
+
+      aboutBtn.addEventListener('click', () => {
+        lines.forEach(l => l.classList.add('line-animate'));
+        mainContent.classList.add('shrink');
+        aboutPanel.classList.add('show');   // triggers slide-in
+      }, { once: true });
     });
   </script>
 </body>
