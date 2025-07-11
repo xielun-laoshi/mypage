@@ -23,11 +23,53 @@
       --transition: cubic-bezier(.1, .7, 0, 1);
     }
 
-    html,
-    body {
+    html, body {
       background: #141414;
       overflow: hidden;
       height: 100%;
+    }
+
+    /* Loader styles */
+    #loaderWrapper {
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      background: #141414;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .loader {
+      height: 3px;
+      width: 60px;
+      background: linear-gradient(#a4a4a4 0 0) right/51% 100% no-repeat;
+      display: flex;
+      animation: l10-0 2s linear infinite;
+    }
+
+    .loader:before,
+    .loader:after {
+      content: "";
+      width: 15px;
+      background: #a4a4a4;
+      animation: l10-1 2s linear infinite;
+    }
+
+    .loader:after {
+      animation-delay: -1s;
+      --s: -1;
+    }
+
+    @keyframes l10-1 {
+      0%,100% { transform: scaleX(var(--s, 1)) rotate(0); }
+      25%,75% { transform: scaleX(var(--s, 1)) rotate(180deg); }
+    }
+
+    @keyframes l10-0 {
+      0%,49.9% { transform: scaleX(1); }
+      50%,100% { transform: scaleX(-1); }
     }
 
     .site-title,
@@ -40,25 +82,9 @@
       z-index: 10;
     }
 
-    .site-title {
-      position: fixed;
-      top: 4vh;
-      left: 2vw;
-      pointer-events: auto;
-      cursor: pointer;
-    }
-    .about-me {
-      position: fixed;
-      top: 4vh;
-      right: 2vw;
-      cursor: pointer;
-    }
-    .contact-me {
-      position: fixed;
-      top: 4vh;
-      right: 10vw;
-      cursor: pointer;
-    }
+    .site-title { position: fixed; top: 4vh; left: 2vw; pointer-events: auto; cursor: pointer; }
+    .about-me { position: fixed; top: 4vh; right: 2vw; cursor: pointer; }
+    .contact-me { position: fixed; top: 4vh; right: 10vw; cursor: pointer; }
 
     .main-content {
       width: 100vw;
@@ -98,15 +124,12 @@
       background: #222 center/cover;
       cursor: pointer;
       filter: grayscale(1) brightness(0.5);
-      transition: transform 1.25s var(--transition),
-        filter 3s var(--transition),
-        width 1.25s var(--transition);
+      transition: transform 1.25s var(--transition), filter 3s var(--transition), width 1.25s var(--transition);
       will-change: transform, filter, rotateY, width;
       position: relative;
     }
 
-    .item::before,
-    .item::after {
+    .item::before, .item::after {
       content: "";
       position: absolute;
       height: 100%;
@@ -118,50 +141,26 @@
       left: calc(var(--index) * -1);
     }
 
-    .items > .item:hover {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 10));
-    }
+    .items > .item:hover { filter: inherit; transform: translateZ(calc(var(--index) * 10)); }
     .items > .item:hover + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg);
-      z-index: -1;
+      filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg); z-index: -1;
     }
     .items > .item:hover + * + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg);
-      z-index: -2;
+      filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg); z-index: -2;
     }
     .items > .item:hover + * + * + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg);
-      z-index: -3;
+      filter: inherit; transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg); z-index: -3;
     }
     .items > .item:hover + * + * + * + * {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 0.6)) rotateY(15deg);
-      z-index: -4;
+      filter: inherit; transform: translateZ(calc(var(--index) * 0.6)) rotateY(15deg); z-index: -4;
     }
 
-    .items > .item:has(+ :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg);
-    }
-    .items > .item:has(+ * + :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg);
-    }
-    .items > .item:has(+ * + * + :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg);
-    }
-    .items > .item:has(+ * + * + * + :hover) {
-      filter: inherit;
-      transform: translateZ(calc(var(--index) * 0.6)) rotateY(-15deg);
-    }
+    .items > .item:has(+ :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg); }
+    .items > .item:has(+ * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg); }
+    .items > .item:has(+ * + * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg); }
+    .items > .item:has(+ * + * + * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 0.6)) rotateY(-15deg); }
 
-    .items > .item:active,
-    .items > .item:focus {
+    .items > .item:active, .items > .item:focus {
       width: 28vw;
       filter: inherit;
       z-index: 100;
@@ -181,21 +180,10 @@
       transition: all 1s ease;
     }
 
-    .line-horizontal {
-      height: 1px;
-      width: 0;
-    }
-    .top-line {
-      top: 10vh;
-      right: 0;
-    }
-    .bottom-line {
-      bottom: 10vh;
-      right: 0;
-    }
-    .line-animate.line-horizontal {
-      width: 100vw;
-    }
+    .line-horizontal { height: 1px; width: 0; }
+    .top-line { top: 10vh; right: 0; }
+    .bottom-line { bottom: 10vh; right: 0; }
+    .line-animate.line-horizontal { width: 100vw; }
 
     .about-panel {
       position: fixed;
@@ -214,8 +202,7 @@
       transition: transform 0.8s ease, padding 0.8s ease;
     }
 
-    .about-panel::before,
-    .about-panel::after {
+    .about-panel::before, .about-panel::after {
       content: "";
       position: absolute;
       left: 0;
@@ -225,12 +212,8 @@
       pointer-events: none;
     }
 
-    .about-panel::before {
-      top: 0;
-    }
-    .about-panel::after {
-      bottom: 0;
-    }
+    .about-panel::before { top: 0; }
+    .about-panel::after { bottom: 0; }
 
     .about-panel.show {
       transform: translateX(0);
@@ -251,6 +234,11 @@
 </head>
 
 <body>
+  <!-- Loader wrapper -->
+  <div id="loaderWrapper">
+    <div class="loader"></div>
+  </div>
+
   <div class="site-title" tabindex="0">Sheron Yang</div>
   <div class="about-me" tabindex="0">About</div>
   <div class="contact-me" tabindex="0">Contact</div>
@@ -261,46 +249,13 @@
   <div class="main-content" id="mainContent">
     <div class="wrapper">
       <div class="items">
-        <div
-          class="item"
-          tabindex="0"
-          style="background-image:url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"
-        ></div>
-        <div
-          class="item"
-          tabindex="0"
-          data-link="https://www.ewadirect.com/proceedings/aemps/article/view/5834"
-          style="background-image:url(cis.jpg)"
-        ></div>
-        <div
-          class="item"
-          tabindex="0"
-          data-link="https://www.figma.com/deck/guW42oUUDeZQDwOCdqgFIU/EcoBear_PitchDeck?node-id=1-42&viewport=-104%2C-15%2C0.5&t=LWuAfEWiNqCjNaoZ-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1"
-          style="background-image:url(designathon.jpg)"
-        ></div>
-        <div
-          class="item"
-          tabindex="0"
-          data-link="https://github.com/xielun-laoshi/WiDS"
-          style="background-image:url(wids.jpg)"
-        ></div>
-        <div
-          class="item"
-          tabindex="0"
-          data-link="https://www.wellesleyhacks.org/"
-          style="background-image:url(whack.jpg)"
-        ></div>
-        <div
-          class="item"
-          tabindex="0"
-          data-link="https://github.com/xielun-laoshi/AI4ALL-Group-3D"
-          style="background-image:url(ai4all.jpg)"
-        ></div>
-        <div
-          class="item"
-          tabindex="0"
-          style="background-image:url(urop.jpg)"
-        ></div>
+        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/15_voqq0c.png)"></div>
+        <div class="item" tabindex="0" data-link="https://www.ewadirect.com/proceedings/aemps/article/view/5834" style="background-image:url(cis.jpg)"></div>
+        <div class="item" tabindex="0" data-link="https://www.figma.com/deck/guW42oUUDeZQDwOCdqgFIU/EcoBear_PitchDeck?node-id=1-42&viewport=-104%2C-15%2C0.5&t=LWuAfEWiNqCjNaoZ-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1" style="background-image:url(designathon.jpg)"></div>
+        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/WiDS" style="background-image:url(wids.jpg)"></div>
+        <div class="item" tabindex="0" data-link="https://www.wellesleyhacks.org/" style="background-image:url(whack.jpg)"></div>
+        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/AI4ALL-Group-3D" style="background-image:url(ai4all.jpg)"></div>
+        <div class="item" tabindex="0" style="background-image:url(urop.jpg)"></div>
       </div>
     </div>
   </div>
@@ -308,10 +263,7 @@
   <div class="about-panel" id="aboutPanel">
     <div class="about-content">
       <h2></h2>
-      <p>
-        I'm Sheron Yang. I reply to messages with memes and sometimes emojis.
-        I make coffee. I'm also learning how to learn.
-      </p>
+      <p>I'm Sheron Yang. I reply to messages with memes and sometimes emojis. I make coffee. I'm also learning how to learn.</p>
     </div>
   </div>
 
@@ -319,116 +271,77 @@
     <div class="about-content">
       <h2></h2>
       <p>
-        <a
-          href="https://www.linkedin.com/in/sheron-yang-63833a329/"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Linkedin</a
-        ><br />
-        <a
-          href="https://github.com/xielun-laoshi"
-          target="_blank"
-          rel="noopener noreferrer"
-          >Github</a
-        ><br />
-        <a href="mailto:xy100@wellesley.edu" target="_blank" rel="noopener noreferrer"
-          >Mail</a
-        >
+        <a href="https://www.linkedin.com/in/sheron-yang-63833a329/" target="_blank" rel="noopener noreferrer">Linkedin</a><br />
+        <a href="https://github.com/xielun-laoshi" target="_blank" rel="noopener noreferrer">Github</a><br />
+        <a href="mailto:xy100@wellesley.edu" target="_blank" rel="noopener noreferrer">Mail</a>
       </p>
     </div>
   </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const aboutBtn = document.querySelector(".about-me");
-      const contactBtn = document.querySelector(".contact-me");
-      const siteTitle = document.querySelector(".site-title");
-      const lines = document.querySelectorAll(".line");
-      const mainContent = document.getElementById("mainContent");
-      const aboutPanel = document.getElementById("aboutPanel");
-      const contactPanel = document.getElementById("contactPanel");
-      const itemsContainer = document.querySelector(".items");
-      const items = document.querySelectorAll(".item");
+      const $ = (s) => document.querySelector(s);
+      const $$ = (s) => document.querySelectorAll(s);
+
+      const aboutBtn = $(".about-me");
+      const contactBtn = $(".contact-me");
+      const siteTitle = $(".site-title");
+      const lines = $$(".line");
+      const mainContent = $("#mainContent");
+      const aboutPanel = $("#aboutPanel");
+      const contactPanel = $("#contactPanel");
+      const itemsContainer = $(".items");
+      const items = $$(".item");
 
       let aboutVisible = false;
       let contactVisible = false;
       let expandedItem = null;
 
-      aboutBtn.addEventListener("click", () => {
-        aboutVisible = !aboutVisible;
-        contactVisible = false;
+      function togglePanel(showAbout, showContact) {
+        requestAnimationFrame(() => {
+          aboutVisible = showAbout;
+          contactVisible = showContact;
 
-        if (aboutVisible) {
-          lines.forEach((l) => l.classList.add("line-animate"));
-          mainContent.classList.add("shrink");
-          aboutPanel.classList.add("show");
-          contactPanel.classList.remove("show");
-          itemsContainer.classList.add("shrink");
-        } else {
-          lines.forEach((l) => l.classList.remove("line-animate"));
-          mainContent.classList.remove("shrink");
-          aboutPanel.classList.remove("show");
-          itemsContainer.classList.remove("shrink");
-        }
-      });
+          lines.forEach((l) => l.classList.toggle("line-animate", showAbout || showContact));
+          mainContent.classList.toggle("shrink", showAbout || showContact);
+          aboutPanel.classList.toggle("show", showAbout);
+          contactPanel.classList.toggle("show", showContact);
+          itemsContainer.classList.toggle("shrink", showAbout || showContact);
+        });
+      }
 
-      contactBtn.addEventListener("click", () => {
-        contactVisible = !contactVisible;
-        aboutVisible = false;
+      aboutBtn.addEventListener("click", () => togglePanel(!aboutVisible, false));
+      contactBtn.addEventListener("click", () => togglePanel(false, !contactVisible));
+      siteTitle.addEventListener("click", () => togglePanel(false, false));
 
-        if (contactVisible) {
-          lines.forEach((l) => l.classList.add("line-animate"));
-          mainContent.classList.add("shrink");
-          contactPanel.classList.add("show");
-          aboutPanel.classList.remove("show");
-          itemsContainer.classList.add("shrink");
-        } else {
-          lines.forEach((l) => l.classList.remove("line-animate"));
-          mainContent.classList.remove("shrink");
-          contactPanel.classList.remove("show");
-          itemsContainer.classList.remove("shrink");
-        }
-      });
-
-      siteTitle.addEventListener("click", () => {
-        aboutVisible = false;
-        contactVisible = false;
-
-        lines.forEach((l) => l.classList.remove("line-animate"));
-        mainContent.classList.remove("shrink");
-        aboutPanel.classList.remove("show");
-        contactPanel.classList.remove("show");
-        itemsContainer.classList.remove("shrink");
-      });
-
-      // Item click: first expands, second navigates
       items.forEach((item) => {
         item.addEventListener("click", (e) => {
           e.stopPropagation();
-
           if (item === expandedItem) {
             const link = item.dataset.link;
-            if (link) {
-              window.open(link, "_blank");
-            }
+            if (link) window.open(link, "_blank");
             expandedItem = null;
           } else {
-            if (expandedItem) {
-              expandedItem.blur();
-            }
+            if (expandedItem) expandedItem.blur();
             item.focus();
             expandedItem = item;
           }
         });
       });
 
-      // Clicking anywhere else collapses expanded item
       document.body.addEventListener("click", () => {
         if (expandedItem) {
           expandedItem.blur();
           expandedItem = null;
         }
-      });
+      }, { passive: true });
+
+      // Loader delay logic
+      const loader = document.getElementById("loaderWrapper");
+      setTimeout(() => {
+        loader.style.display = "none";
+        document.body.style.overflow = "auto";
+      }, 1000); // At least 1 second
     });
   </script>
 </body>
