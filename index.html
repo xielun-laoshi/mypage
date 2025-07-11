@@ -269,26 +269,31 @@
         <div
           class="item"
           tabindex="0"
+          data-link="https://www.ewadirect.com/proceedings/aemps/article/view/5834"
           style="background-image:url(cis.jpg)"
         ></div>
         <div
           class="item"
           tabindex="0"
+          data-link="https://www.figma.com/deck/guW42oUUDeZQDwOCdqgFIU/EcoBear_PitchDeck?node-id=1-42&viewport=-104%2C-15%2C0.5&t=LWuAfEWiNqCjNaoZ-1&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1"
           style="background-image:url(designathon.jpg)"
         ></div>
         <div
           class="item"
           tabindex="0"
+          data-link="https://github.com/xielun-laoshi/WiDS"
           style="background-image:url(wids.jpg)"
         ></div>
         <div
           class="item"
           tabindex="0"
+          data-link="https://www.wellesleyhacks.org/"
           style="background-image:url(whack.jpg)"
         ></div>
         <div
           class="item"
           tabindex="0"
+          data-link="https://github.com/xielun-laoshi/AI4ALL-Group-3D"
           style="background-image:url(ai4all.jpg)"
         ></div>
         <div
@@ -342,10 +347,12 @@
       const mainContent = document.getElementById("mainContent");
       const aboutPanel = document.getElementById("aboutPanel");
       const contactPanel = document.getElementById("contactPanel");
-      const items = document.querySelector(".items");
+      const itemsContainer = document.querySelector(".items");
+      const items = document.querySelectorAll(".item");
 
       let aboutVisible = false;
       let contactVisible = false;
+      let expandedItem = null;
 
       aboutBtn.addEventListener("click", () => {
         aboutVisible = !aboutVisible;
@@ -356,12 +363,12 @@
           mainContent.classList.add("shrink");
           aboutPanel.classList.add("show");
           contactPanel.classList.remove("show");
-          items.classList.add("shrink");
+          itemsContainer.classList.add("shrink");
         } else {
           lines.forEach((l) => l.classList.remove("line-animate"));
           mainContent.classList.remove("shrink");
           aboutPanel.classList.remove("show");
-          items.classList.remove("shrink");
+          itemsContainer.classList.remove("shrink");
         }
       });
 
@@ -374,12 +381,12 @@
           mainContent.classList.add("shrink");
           contactPanel.classList.add("show");
           aboutPanel.classList.remove("show");
-          items.classList.add("shrink");
+          itemsContainer.classList.add("shrink");
         } else {
           lines.forEach((l) => l.classList.remove("line-animate"));
           mainContent.classList.remove("shrink");
           contactPanel.classList.remove("show");
-          items.classList.remove("shrink");
+          itemsContainer.classList.remove("shrink");
         }
       });
 
@@ -391,7 +398,36 @@
         mainContent.classList.remove("shrink");
         aboutPanel.classList.remove("show");
         contactPanel.classList.remove("show");
-        items.classList.remove("shrink");
+        itemsContainer.classList.remove("shrink");
+      });
+
+      // Item click: first expands, second navigates
+      items.forEach((item) => {
+        item.addEventListener("click", (e) => {
+          e.stopPropagation();
+
+          if (item === expandedItem) {
+            const link = item.dataset.link;
+            if (link) {
+              window.open(link, "_blank");
+            }
+            expandedItem = null;
+          } else {
+            if (expandedItem) {
+              expandedItem.blur();
+            }
+            item.focus();
+            expandedItem = item;
+          }
+        });
+      });
+
+      // Clicking anywhere else collapses expanded item
+      document.body.addEventListener("click", () => {
+        if (expandedItem) {
+          expandedItem.blur();
+          expandedItem = null;
+        }
       });
     });
   </script>
