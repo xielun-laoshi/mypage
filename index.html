@@ -340,7 +340,6 @@
       <p>Select a project to see details here.</p>
     </div>
   </div>
-
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const $ = (s) => document.querySelector(s);
@@ -357,56 +356,27 @@
       const itemsContainer = $(".items");
       const items = $$(".item");
 
-      let aboutVisible = false;
-      let contactVisible = false;
-      let projectVisible = false;
       let expandedItem = null;
 
-      // Project details data
       const projectDetails = {
-        proj1: {
-          title: "Subsidy Impact on China's EV Uptake",
-          description: "<br /> *Click on the picture again to see project details. <br /><br />This project was nominated for the S.-T. Yau Science Award in 2022."
-        },
-        proj2: {
-          title: "China's Hog Futures Research",
-          description: "<br />  *Click on the picture again to see project details. <br /><br />Presented at ICEMGD 7th in 2023, focusing on futures market analysis."
-        },
-        proj3: {
-          title: "EcoBear, a Web Widget",
-          description: "<br /> *Click on the picture again to see project details. <br /><br />Winning project at Wellesley College Designathon 2024."
-        },
-        proj4: {
-          title: "ADHD Diagnosis for Women",
-          description: "<br /> *Click on the picture again to see project details. <br /><br />Kaggle 'Women in Data Science' Hackathon Winning project for 2025."
-        },
-        proj5: {
-          title: "Wellesley College Hackathon Official Site",
-          description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing webpage project for Wellesley College Hackathon."
-        },
-        proj6: {
-          title: "Predicting Text Readability For Children",
-          description: "<br /> *Click on the picture again to see project details. <br /><br />Project affiliated with BreakThroughTech AI, using advanced NLP."
-        },
-        proj7: {
-          title: "Research on ANN Filtered Vector Search",
-          description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing project affiliated with MIT CSAIL."
-        }
+        proj1: { title: "Subsidy Impact on China's EV Uptake", description: "<br /> *Click on the picture again to see project details. <br /><br />This project was nominated for the S.-T. Yau Science Award in 2022." },
+        proj2: { title: "China's Hog Futures Research", description: "<br />  *Click on the picture again to see project details. <br /><br />Presented at ICEMGD 7th in 2023, focusing on futures market analysis." },
+        proj3: { title: "EcoBear, a Web Widget", description: "<br /> *Click on the picture again to see project details. <br /><br />Winning project at Wellesley College Designathon 2024." },
+        proj4: { title: "ADHD Diagnosis for Women", description: "<br /> *Click on the picture again to see project details. <br /><br />Kaggle 'Women in Data Science' Hackathon Winning project for 2025." },
+        proj5: { title: "Wellesley College Hackathon Official Site", description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing webpage project for Wellesley College Hackathon." },
+        proj6: { title: "Predicting Text Readability For Children", description: "<br /> *Click on the picture again to see project details. <br /><br />Project affiliated with BreakThroughTech AI, using advanced NLP." },
+        proj7: { title: "Research on ANN Filtered Vector Search", description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing project affiliated with MIT CSAIL." }
       };
 
       function togglePanel(showAbout, showContact, showProject) {
-        requestAnimationFrame(() => {
-          aboutVisible = showAbout;
-          contactVisible = showContact;
-          projectVisible = showProject;
+        aboutPanel.classList.toggle("show", showAbout);
+        contactPanel.classList.toggle("show", showContact);
+        projectPanel.classList.toggle("show", showProject);
 
-          lines.forEach((l) => l.classList.toggle("line-animate", showAbout || showContact || showProject));
-          mainContent.classList.toggle("shrink", showAbout || showContact || showProject);
-          aboutPanel.classList.toggle("show", showAbout);
-          contactPanel.classList.toggle("show", showContact);
-          projectPanel.classList.toggle("show", showProject);
-          itemsContainer.classList.toggle("shrink", showAbout || showContact || showProject);
-        });
+        const anyPanel = showAbout || showContact || showProject;
+        lines.forEach((l) => l.classList.toggle("line-animate", anyPanel));
+        mainContent.classList.toggle("shrink", anyPanel);
+        itemsContainer.classList.toggle("shrink", anyPanel);
       }
 
       function showProjectContent(projectId) {
@@ -422,9 +392,31 @@
         }
       }
 
-      aboutBtn.addEventListener("click", () => togglePanel(!aboutVisible, false, false));
-      contactBtn.addEventListener("click", () => togglePanel(false, !contactVisible, false));
-      siteTitle.addEventListener("click", () => togglePanel(false, false, false));
+      aboutBtn.addEventListener("click", () => {
+        if (expandedItem) {
+          expandedItem.classList.remove("active");
+          expandedItem = null;
+        }
+        const isOpen = aboutPanel.classList.contains("show");
+        togglePanel(!isOpen, false, false);
+      });
+
+      contactBtn.addEventListener("click", () => {
+        if (expandedItem) {
+          expandedItem.classList.remove("active");
+          expandedItem = null;
+        }
+        const isOpen = contactPanel.classList.contains("show");
+        togglePanel(false, !isOpen, false);
+      });
+
+      siteTitle.addEventListener("click", () => {
+        if (expandedItem) {
+          expandedItem.classList.remove("active");
+          expandedItem = null;
+        }
+        togglePanel(false, false, false);
+      });
 
       items.forEach((item) => {
         item.addEventListener("click", (e) => {
@@ -451,8 +443,8 @@
         });
       });
 
-      document.body.addEventListener("click", () => {
-        if (expandedItem) {
+      document.body.addEventListener("click", (e) => {
+        if (expandedItem && !e.target.closest(".item")) {
           expandedItem.classList.remove("active");
           expandedItem.blur();
           expandedItem = null;
