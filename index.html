@@ -114,7 +114,7 @@
     }
 
     .items.shrink {
-      transform: scaleX(0.85);
+      transform: scaleX(0.88);
     }
 
     .item {
@@ -191,6 +191,12 @@
       z-index: 100;
       transform: translateZ(calc(var(--index) * 10));
       margin: 0 0.45vw;
+    }
+
+    .item:hover .top-text,
+    .item:hover .bottom-text {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
     }
 
     a {
@@ -270,31 +276,31 @@
   <div class="main-content" id="mainContent">
     <div class="wrapper">
       <div class="items">
-        <div class="item" tabindex="0" style="background-image:url(https://highflyer.sirv.com/cloud/15_voqq0c.png)">
-          <div class="item-text top-text">Example Top</div>
+        <div class="item" tabindex="0" data-link="The Impact of Subsidy on EV Adoption.pdf" data-project="proj1" style="background-image:url(EV.jpg)">
+          <div class="item-text top-text">Subsidy Impact on China's EV Uptake</div>
           <div class="item-text bottom-text">Project (S.-T. Yau Science Award Nominated)- 2022</div>
         </div>
-        <div class="item" tabindex="0" data-link="https://www.ewadirect.com/proceedings/aemps/article/view/5834" style="background-image:url(cis.jpg)">
+        <div class="item" tabindex="0" data-link="https://www.ewadirect.com/proceedings/aemps/article/view/5834" data-project="proj2" style="background-image:url(cis.jpg)">
           <div class="item-text top-text">China's Hog Futures Research</div>
           <div class="item-text bottom-text">Project (ICEMGD 7th) - 2023</div>
         </div>
-        <div class="item" tabindex="0" data-link="https://www.figma.com/deck/guW42oUUDeZQDwOCdqgFIU/EcoBear_PitchDeck" style="background-image:url(designathon.jpg)">
+        <div class="item" tabindex="0" data-link="https://www.figma.com/deck/guW42oUUDeZQDwOCdqgFIU/EcoBear_PitchDeck" data-project="proj3" style="background-image:url(designathon.jpg)">
           <div class="item-text top-text">EcoBear, a Web Widget</div>
           <div class="item-text bottom-text">Project (Wellesley College Designathon Winning) - 2024</div>
         </div>
-        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/WiDS" style="background-image:url(wids.jpg)">
+        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/WiDS" data-project="proj4" style="background-image:url(wids.jpg)">
           <div class="item-text top-text">ADHD Diagnosis for Women</div>
           <div class="item-text bottom-text">Project (Kaggle "Women in Data Science" Hackathon Winning) - 2025</div>
         </div>
-        <div class="item" tabindex="0" data-link="https://www.wellesleyhacks.org/" style="background-image:url(whack.jpg)">
+        <div class="item" tabindex="0" data-link="https://www.wellesleyhacks.org/" data-project="proj5" style="background-image:url(whack.jpg)">
           <div class="item-text top-text">Wellesley College Hackathon Official Site</div>
           <div class="item-text bottom-text">Webpage - Ongoing</div>
         </div>
-        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/AI4ALL-Group-3D" style="background-image:url(ai4all.jpg)">
+        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/AI4ALL-Group-3D" data-project="proj6" style="background-image:url(ai4all.jpg)">
           <div class="item-text top-text">Predicting Text Readability For Children Through Advanced NLP</div>
           <div class="item-text bottom-text">Project (Affiliated with BreakThroughTech AI) - Ongoing</div>
         </div>
-        <div class="item" tabindex="0" style="background-image:url(urop.jpg)">
+        <div class="item" tabindex="0" data-project="proj7" style="background-image:url(urop.jpg)">
           <div class="item-text top-text">Research on ANN Filtered Vector Search</div>
           <div class="item-text bottom-text">Project (Affiliated with MITCSAIL) - Ongoing</div>
         </div>
@@ -320,6 +326,13 @@
     </div>
   </div>
 
+  <div class="about-panel project-panel" id="projectPanel">
+    <div class="about-content">
+      <h2>Project Details</h2>
+      <p>Select a project to see details here.</p>
+    </div>
+  </div>
+
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const $ = (s) => document.querySelector(s);
@@ -332,29 +345,78 @@
       const mainContent = $("#mainContent");
       const aboutPanel = $("#aboutPanel");
       const contactPanel = $("#contactPanel");
+      const projectPanel = $("#projectPanel");
       const itemsContainer = $(".items");
       const items = $$(".item");
 
       let aboutVisible = false;
       let contactVisible = false;
+      let projectVisible = false;
       let expandedItem = null;
 
-      function togglePanel(showAbout, showContact) {
+      // Project details data
+      const projectDetails = {
+        proj1: {
+          title: "Subsidy Impact on China's EV Uptake",
+          description: "<br /> *Click on the picture again to see project details. <br /><br />This project was nominated for the S.-T. Yau Science Award in 2022."
+        },
+        proj2: {
+          title: "China's Hog Futures Research",
+          description: "<br />  *Click on the picture again to see project details. <br /><br />Presented at ICEMGD 7th in 2023, focusing on futures market analysis."
+        },
+        proj3: {
+          title: "EcoBear, a Web Widget",
+          description: "<br /> *Click on the picture again to see project details. <br /><br />Winning project at Wellesley College Designathon 2024."
+        },
+        proj4: {
+          title: "ADHD Diagnosis for Women",
+          description: "<br /> *Click on the picture again to see project details. <br /><br />Kaggle 'Women in Data Science' Hackathon Winning project for 2025."
+        },
+        proj5: {
+          title: "Wellesley College Hackathon Official Site",
+          description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing webpage project for Wellesley College Hackathon."
+        },
+        proj6: {
+          title: "Predicting Text Readability For Children",
+          description: "<br /> *Click on the picture again to see project details. <br /><br />Project affiliated with BreakThroughTech AI, using advanced NLP."
+        },
+        proj7: {
+          title: "Research on ANN Filtered Vector Search",
+          description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing project affiliated with MIT CSAIL."
+        }
+      };
+
+      function togglePanel(showAbout, showContact, showProject) {
         requestAnimationFrame(() => {
           aboutVisible = showAbout;
           contactVisible = showContact;
+          projectVisible = showProject;
 
-          lines.forEach((l) => l.classList.toggle("line-animate", showAbout || showContact));
-          mainContent.classList.toggle("shrink", showAbout || showContact);
+          lines.forEach((l) => l.classList.toggle("line-animate", showAbout || showContact || showProject));
+          mainContent.classList.toggle("shrink", showAbout || showContact || showProject);
           aboutPanel.classList.toggle("show", showAbout);
           contactPanel.classList.toggle("show", showContact);
-          itemsContainer.classList.toggle("shrink", showAbout || showContact);
+          projectPanel.classList.toggle("show", showProject);
+          itemsContainer.classList.toggle("shrink", showAbout || showContact || showProject);
         });
       }
 
-      aboutBtn.addEventListener("click", () => togglePanel(!aboutVisible, false));
-      contactBtn.addEventListener("click", () => togglePanel(false, !contactVisible));
-      siteTitle.addEventListener("click", () => togglePanel(false, false));
+      function showProjectContent(projectId) {
+        const panelTitle = projectPanel.querySelector("h2");
+        const panelDesc = projectPanel.querySelector("p");
+
+        if (projectDetails[projectId]) {
+          panelTitle.innerHTML = projectDetails[projectId].title;
+          panelDesc.innerHTML = projectDetails[projectId].description;
+        } else {
+          panelTitle.textContent = "Project Details";
+          panelDesc.textContent = "No additional information available.";
+        }
+      }
+
+      aboutBtn.addEventListener("click", () => togglePanel(!aboutVisible, false, false));
+      contactBtn.addEventListener("click", () => togglePanel(false, !contactVisible, false));
+      siteTitle.addEventListener("click", () => togglePanel(false, false, false));
 
       items.forEach((item) => {
         item.addEventListener("click", (e) => {
@@ -365,14 +427,18 @@
             if (link) window.open(link, "_blank");
             item.classList.remove("active");
             expandedItem = null;
+            togglePanel(false, false, false);
           } else {
             if (expandedItem) {
               expandedItem.classList.remove("active");
-              expandedItem.blur();
             }
             item.focus();
             item.classList.add("active");
             expandedItem = item;
+
+            const projectId = item.dataset.project;
+            showProjectContent(projectId);
+            togglePanel(false, false, true);
           }
         });
       });
@@ -382,6 +448,7 @@
           expandedItem.classList.remove("active");
           expandedItem.blur();
           expandedItem = null;
+          togglePanel(false, false, false);
         }
       }, { passive: true });
 
