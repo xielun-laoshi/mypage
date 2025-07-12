@@ -14,8 +14,8 @@
     }
 
     @font-face {
-      font-family: MagdaCleanMono;
-      src: url("MagdaCleanMono-Regular.woff") format("woff");
+      font-family: SpaceMono;
+      src: url("SpaceMono-Regular.ttf") format("truetype");
     }
 
     :root {
@@ -75,7 +75,7 @@
     .about-me,
     .contact-me {
       font-family: "MagdaCleanMono", monospace;
-      font-size: calc(var(--index) * 0.9);
+      font-size: calc(var(--index) * 0.8);
       color: #a4a4a4;
       user-select: none;
       z-index: 10;
@@ -135,8 +135,8 @@
       transform: translateX(-50%) translateY(0);
       width: max-content;
       white-space: nowrap;
-      font-family: "MagdaCleanMono", monospace;
-      font-size: calc(var(--index) * 0.5);
+      font-family: "SpaceMono", monospace;
+      font-size: calc(var(--index) * 0.4);
       color: #a4a4a4;
       opacity: 0;
       pointer-events: none;
@@ -225,7 +225,7 @@
       background: #141414;
       color: #a4a4a4;
       border-left: #a4a4a4 solid 1px;
-      font-family: "MagdaCleanMono", monospace;
+      font-family: "SpaceMono", monospace;
       overflow: hidden;
       z-index: 8;
       transform: translateX(100%);
@@ -255,6 +255,14 @@
       opacity: 0;
       transform: translateX(30%);
       transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s;
+      font-size: calc(var(--index) * 0.6);
+      line-height: 1;
+      color: #a4a4a4;
+    }
+
+    .about-content h2 {
+      font-size: calc(var(--index) * 0.7);
+      margin-bottom: 1rem;
     }
 
     .about-panel.show .about-content {
