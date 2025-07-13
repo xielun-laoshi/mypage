@@ -23,6 +23,23 @@
       --transition: cubic-bezier(.1, .7, 0, 1);
     }
 
+    body, * {
+      cursor: none !important;
+    }
+    
+    .circle {
+      --circle-size: 40px;
+      position: fixed;
+      height: var(--circle-size);
+      width: var(--circle-size);
+      border: 1px solid white;
+      border-radius: 50%;
+      top: calc(var(--circle-size) / -2);
+      left: calc(var(--circle-size) / -2);
+      pointer-events: none;
+      z-index: 99999;
+    }
+
     html, body {
       background: #141414;
       overflow: hidden;
@@ -212,8 +229,8 @@
     }
 
     .line-horizontal { height: 1px; width: 0; }
-    .top-line { top: 10vh; right: 0; }
-    .bottom-line { bottom: 10vh; right: 0; }
+    .top-line { top: 11vh; right: 0; }
+    .bottom-line { bottom: 11vh; right: 0; }
     .line-animate.line-horizontal { width: 100vw; }
 
     .about-panel {
@@ -232,19 +249,6 @@
       padding: 0;
       transition: transform 0.8s ease, padding 0.8s ease;
     }
-
-    .about-panel::before, .about-panel::after {
-      content: "";
-      position: absolute;
-      left: 0;
-      width: 100%;
-      height: 10%;
-      background: #1a1a1a;
-      pointer-events: none;
-    }
-
-    .about-panel::before { top: 0; }
-    .about-panel::after { bottom: 0; }
 
     .about-panel.show {
       transform: translateX(0);
@@ -273,7 +277,7 @@
 </head>
 <body>
   <div id="loaderWrapper"><div class="loader"></div></div>
-
+  <div class="circle"></div>
   <div class="site-title" tabindex="0">Sheron Yang</div>
   <div class="about-me" tabindex="0">About</div>
   <div class="contact-me" tabindex="0">Contact</div>
@@ -355,8 +359,17 @@
       const projectPanel = $("#projectPanel");
       const itemsContainer = $(".items");
       const items = $$(".item");
+      const circleElement = $(".circle");
 
       let expandedItem = null;
+      let isMouseDown = false;
+
+      const mouse = { x: 0, y: 0 };
+      const previousMouse = { x: 0, y: 0 };
+      const circle = { x: 0, y: 0 };
+      let currentScale = 0;
+      let currentAngle = 0;
+      const speed = 0.17;
 
       const projectDetails = {
         proj1: { title: "Subsidy Impact on China's EV Uptake", description: "<br /> *Click on the picture again to see project details. <br /><br />This project was nominated for the S.-T. Yau Science Award in 2022." },
@@ -452,6 +465,55 @@
         }
       }, { passive: true });
 
+      // Mouse position tracker
+      window.addEventListener('mousemove', (e) => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+      });
+
+      window.addEventListener('mousedown', () => {
+        isMouseDown = true;
+      });
+
+      window.addEventListener('mouseup', () => {
+        isMouseDown = false;
+      });
+
+      const tick = () => {
+        // MOVE
+        circle.x += (mouse.x - circle.x) * speed;
+        circle.y += (mouse.y - circle.y) * speed;
+        const translate = `translate(${circle.x}px, ${circle.y}px)`;
+
+        // VELOCITY + SCALE
+        const deltaX = mouse.x - previousMouse.x;
+        const deltaY = mouse.y - previousMouse.y;
+        previousMouse.x = mouse.x;
+        previousMouse.y = mouse.y;
+
+        const velocity = Math.min(Math.sqrt(deltaX**2 + deltaY**2) * 4, 150);
+        const squeezeScale = (velocity / 150) * 0.6;
+        currentScale += (squeezeScale - currentScale) * speed;
+
+        const baseScale = isMouseDown ? 0.7 : 1;
+        const scale = `scale(${baseScale + currentScale}, ${baseScale - currentScale})`;
+
+        // ROTATE
+        const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
+        if (velocity > 20) {
+          currentAngle = angle;
+        }
+        const rotate = `rotate(${currentAngle}deg)`;
+
+        // Apply transform
+        circleElement.style.transform = `${translate} ${rotate} ${scale}`;
+
+        requestAnimationFrame(tick);
+      };
+
+      tick();
+
+      // Loader fade
       const loader = document.getElementById("loaderWrapper");
       setTimeout(() => {
         loader.style.display = "none";
@@ -459,5 +521,6 @@
       }, 1000);
     });
   </script>
+
 </body>
 </html>
