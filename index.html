@@ -5,7 +5,6 @@
   <title>Sheron Yang</title>
   <link rel="shortcut icon" type="image/x-icon" href="S.ico" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
   <style>
     * {
       margin: 0;
@@ -14,224 +13,205 @@
     }
 
     @font-face {
-      font-family: SpaceMono;
-      src: url("SpaceMono-Regular.ttf") format("truetype");
+      font-family: "SpaceMono";
+      src: url("SF-Pro-Rounded-Light.otf") format("opentype");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    @font-face {
+      font-family: "SpaceMonoBold";
+      src: url("SF-Pro-Rounded-Medium.otf") format("opentype");
+      font-weight: bold;
+      font-style: normal;
     }
 
     :root {
       --index: calc(1vw + 1vh);
-      --transition: cubic-bezier(.1, .7, 0, 1);
+      --bg-color: #d1d1d1;
+      --text-color: #1a1a1a;
+      --line-color: #1a1a1a;
+      --panel-border: #1a1a1a;
+      --cursor-border: #1a1a1a;
+      --canvas-bg: #d1d1d1;
     }
 
-    body, * {
-      cursor: none !important;
+    [data-theme="dark"] {
+      --bg-color: #1a1a1a;
+      --text-color: #c6c6c6;
+      --line-color: #c6c6c6;
+      --panel-border: #c6c6c6;
+      --cursor-border: #c6c6c6;
+      --canvas-bg: #1a1a1a;
     }
-    
+
+    html, body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      overflow: hidden;
+      height: 100%;
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
     .circle {
       --circle-size: 40px;
       position: fixed;
       height: var(--circle-size);
       width: var(--circle-size);
-      border: 1px solid white;
-      border-radius: 50%;
-      top: calc(var(--circle-size) / -2);
-      left: calc(var(--circle-size) / -2);
+      border: 1px solid var(--cursor-border);
+      border-radius: 100%;
+      top: calc(var(--circle-size) / 2 * -1);
+      left: calc(var(--circle-size) / 2 * -1);
       pointer-events: none;
-      z-index: 99999;
-    }
-
-    html, body {
-      background: #141414;
-      overflow: hidden;
-      height: 100%;
-    }
-
-    #loaderWrapper {
-      position: fixed;
-      width: 100vw;
-      height: 100vh;
-      background: #141414;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       z-index: 9999;
-    }
-
-    .loader {
-      height: 3px;
-      width: 60px;
-      background: linear-gradient(#a4a4a4 0 0) right/51% 100% no-repeat;
-      display: flex;
-      animation: l10-0 2s linear infinite;
-    }
-
-    .loader:before,
-    .loader:after {
-      content: "";
-      width: 15px;
-      background: #a4a4a4;
-      animation: l10-1 2s linear infinite;
-    }
-
-    .loader:after {
-      animation-delay: -1s;
-      --s: -1;
-    }
-
-    @keyframes l10-1 {
-      0%,100% { transform: scaleX(var(--s, 1)) rotate(0); }
-      25%,75% { transform: scaleX(var(--s, 1)) rotate(180deg); }
-    }
-
-    @keyframes l10-0 {
-      0%,49.9% { transform: scaleX(1); }
-      50%,100% { transform: scaleX(-1); }
     }
 
     .site-title,
     .about-me,
-    .contact-me {
-      font-family: "MagdaCleanMono", monospace;
-      font-size: calc(var(--index) * 0.8);
-      color: #a4a4a4;
+    .contact-me,
+    .light-mode,
+    .dark-mode,
+    .projects-button {
+      color: var(--text-color);
       user-select: none;
       z-index: 10;
+      transition: color 0.4s ease, opacity 0.4s ease;
     }
 
-    .site-title { position: fixed; top: 4vh; left: 2vw; pointer-events: auto; cursor: pointer; }
-    .about-me { position: fixed; top: 4vh; right: 2vw; cursor: pointer; }
-    .contact-me { position: fixed; top: 4vh; right: 10vw; cursor: pointer; }
-
-    .main-content {
-      width: 100vw;
-      height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: width 1s ease;
+    .site-title:hover,
+    .about-me:hover,
+    .contact-me:hover,
+    .light-mode:hover,
+    .dark-mode:hover,
+    .projects-button:hover,
+    .project-title:hover,
+    .hover-link:hover {
+      opacity: 0.3;
+      transition: opacity 0.3s ease;
     }
 
-    .main-content.shrink {
-      width: 70vw;
-    }
+    /*.project-title:hover {
+      opacity: 0.3;
+      transition: opacity 0.3s ease;
+    }*/
 
-    .wrapper {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .items {
-      display: flex;
-      gap: 0.4rem;
-      perspective: calc(var(--index) * 35);
-      transition: transform 1s ease;
-      transform-origin: center;
-    }
-
-    .items.shrink {
-      transform: scaleX(0.88);
-    }
-
-    .item {
-      position: relative;
-      overflow: visible; /* allow text overflow */
-      width: calc(var(--index) * 4.2);
-      height: calc(var(--index) * 14);
-      background: #222 center/cover;
-      cursor: pointer;
-      filter: grayscale(1) brightness(0.5);
-      transition: transform 1.25s var(--transition), filter 3s var(--transition), width 1.25s var(--transition);
-      will-change: transform, filter, rotateY, width;
-    }
-
-    .item-text {
-      position: absolute;
-      left: 50%;
-      transform: translateX(-50%) translateY(0);
-      width: max-content;
-      white-space: nowrap;
+    .site-title {
       font-family: "SpaceMono", monospace;
-      font-size: calc(var(--index) * 0.4);
-      color: #a4a4a4;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.4s ease, transform 0.4s ease;
-      z-index: 200;
+      font-size: calc(var(--index) * 2.5);
+      position: fixed;
+      font-weight: 1000;
+      letter-spacing: 0.05em;
+      top: 3vh;
+      left: 2.5vw;
+      pointer-events: auto;
+      cursor: pointer;
     }
 
-    .top-text {
-      bottom: 100%;  /* just above the item */
-      margin-bottom: 2vh; /* some spacing */
-      transform: translateX(-50%) translateY(10px); /* start slightly lower */
+    .about-me, .contact-me, .light-mode, .dark-mode, .projects-button {
+      font-family: "SpaceMonoBold", monospace;
+      font-size: calc(var(--index) * 0.65);
+      font-weight: 1000;
+      position: fixed;
+      cursor: pointer;
     }
 
-    .bottom-text {
-      top: 100%; /* just below the item */
-      margin-top: 2vh; /* spacing */
-      transform: translateX(-50%) translateY(-10px); /* start slightly higher */
+    .about-me {
+      top: 11.3vh;
+      right: 1.5vw;
     }
 
-    .item.active .top-text {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
+    .contact-me {
+      top: 11.3vh;
+      right: 5.5vw;
     }
 
-    .item.active .bottom-text {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
+    .projects-button {
+      top: 11.3vh;
+      right: 10.4vw;
     }
 
-    .items > .item:hover { filter: inherit; transform: translateZ(calc(var(--index) * 10)); }
-    .items > .item:hover + * {
-      filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(35deg); z-index: -1;
-    }
-    .items > .item:hover + * + * {
-      filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(40deg); z-index: -2;
-    }
-    .items > .item:hover + * + * + * {
-      filter: inherit; transform: translateZ(calc(var(--index) * 2.5)) rotateY(30deg); z-index: -3;
-    }
-    .items > .item:hover + * + * + * + * {
-      filter: inherit; transform: translateZ(calc(var(--index) * 0.6)) rotateY(15deg); z-index: -4;
+    .light-mode {
+      bottom: 11.3vh;
+      right: 1.5vw;
     }
 
-    .items > .item:has(+ :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 8.5)) rotateY(-35deg); }
-    .items > .item:has(+ * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 5.6)) rotateY(-40deg); }
-    .items > .item:has(+ * + * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 2.5)) rotateY(-30deg); }
-    .items > .item:has(+ * + * + * + :hover) { filter: inherit; transform: translateZ(calc(var(--index) * 0.6)) rotateY(-15deg); }
-
-    .items > .item:active, .items > .item:focus {
-      width: 28vw;
-      filter: inherit;
-      z-index: 100;
-      transform: translateZ(calc(var(--index) * 10));
-      margin: 0 0.45vw;
+    .dark-mode {
+      bottom: 11.3vh;
+      right: 5vw;
     }
 
-    .item:hover .top-text,
-    .item:hover .bottom-text {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
+    .about-text {
+      font-family: "SpaceMonoBold", monospace;
+      font-size: calc(var(--index) * 0.65);
+      font-weight: 1000;
+      position: fixed;
+      bottom: calc(15vh + 3vh);
+      left: 2vw;
+      color: var(--text-color);
+      z-index: 10;
+      user-select: none;
+      transition: color 0.4s ease;
     }
 
     .line {
       position: fixed;
-      background: #a4a4a4;
+      background: var(--line-color);
       z-index: 10;
-      transition: all 1s ease;
+      transition: background 0.4s ease;
     }
 
-    .line-horizontal { height: 1px; width: 0; }
-    .top-line { top: 11vh; right: 0; }
-    .bottom-line { bottom: 11vh; right: 0; }
-    .line-animate.line-horizontal { width: 100vw; }
+    .line-horizontal {
+      height: 1px;
+      width: 100vw;
+      left: 0;
+    }
+
+    .top-line {
+      top: 15vh;
+      right: 0;
+    }
+
+    .bottom-line {
+      bottom: 15vh;
+      right: 0;
+    }
+
+    .scroller-container {
+      position: fixed;
+      align-items: center;
+      top: 15vh;
+      left: 1.1vw;
+      width: 70%;
+      height: 70vh;
+      overflow-y: auto;
+      padding: 20px;
+      background: transparent;
+      scrollbar-width: none;
+      opacity: 0;
+      pointer-events: none;
+      z-index: 9;
+    }
+
+    .scroller-container.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .about-text.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    
+    .scroller-container::-webkit-scrollbar {
+      display: none;
+    }
+    
+    .scroller-content div {
+      font-family: "SpaceMono", monospace;
+      font-size: calc(var(--index) * 2.3);
+      margin-bottom: 30px;
+      line-height: 1.75;
+    }
 
     .about-panel {
       position: fixed;
@@ -239,91 +219,76 @@
       right: 0;
       height: 100vh;
       width: 30vw;
-      background: #141414;
-      color: #a4a4a4;
-      border-left: #a4a4a4 solid 1px;
+      background: var(--bg-color);
+      color: var(--text-color);
+      border-left: 1px solid var(--panel-border);
       font-family: "SpaceMono", monospace;
       overflow: hidden;
       z-index: 8;
       transform: translateX(100%);
       padding: 0;
-      transition: transform 0.8s ease, padding 0.8s ease;
+      transition: transform 0.8s ease, padding 0.8s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
     }
 
     .about-panel.show {
       transform: translateX(0);
-      padding: 15vh 4vw 2vh 4vw;
+      font-weight:900;
+      padding: 17vh 3vw 2vh 4vw;
     }
 
     .about-content {
       opacity: 0;
       transform: translateX(30%);
-      transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s;
-      font-size: calc(var(--index) * 0.6);
-      line-height: 1;
-      color: #a4a4a4;
+      transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s, color 0.4s ease;
+      font-size: calc(var(--index) * 0.65);
+      line-height: 1.25;
+      word-spacing: 0.05em;
+      letter-spacing: 0.05em;
+      font-weight: bold;
+      color: var(--text-color);
     }
 
     .about-content h2 {
+      font-family: "SpaceMonoBold", monospace;
       font-size: calc(var(--index) * 0.7);
+      font-weight: bold;
       margin-bottom: 1rem;
+      letter-spacing: 0em;
+      word-spacing: 0em;
     }
 
     .about-panel.show .about-content {
       opacity: 1;
       transform: translateX(0);
     }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
   </style>
 </head>
-<body>
-  <div id="loaderWrapper"><div class="loader"></div></div>
+<body data-theme="light">
   <div class="circle"></div>
   <div class="site-title" tabindex="0">Sheron Yang</div>
   <div class="about-me" tabindex="0">About</div>
   <div class="contact-me" tabindex="0">Contact</div>
+  <div class="light-mode" tabindex="0">Light</div>
+  <div class="dark-mode" tabindex="0">Dark</div>
+  <div class="projects-button" tabindex="0">Projects</div>
+  <div class="about-text">I'm Sheron Yang.<br>
+    I reply to messages with memes and emojis.<br>
+    I make coffee.<br>
+    I pull all-nighters gaming.<br>
+    I also sometimes maybe code.</div>
 
   <div class="line line-horizontal top-line"></div>
   <div class="line line-horizontal bottom-line"></div>
 
-  <div class="main-content" id="mainContent">
-    <div class="wrapper">
-      <div class="items">
-        <div class="item" tabindex="0" data-link="The Impact of Subsidy on EV Adoption.pdf" data-project="proj1" style="background-image:url(EV.jpg)">
-          <div class="item-text top-text">Subsidy Impact on China's EV Uptake</div>
-          <div class="item-text bottom-text">Project (S.-T. Yau Science Award Nominated)- 2022</div>
-        </div>
-        <div class="item" tabindex="0" data-link="https://www.ewadirect.com/proceedings/aemps/article/view/5834" data-project="proj2" style="background-image:url(cis.jpg)">
-          <div class="item-text top-text">China's Hog Futures Research</div>
-          <div class="item-text bottom-text">Project (ICEMGD 7th) - 2023</div>
-        </div>
-        <div class="item" tabindex="0" data-link="https://www.figma.com/deck/guW42oUUDeZQDwOCdqgFIU/EcoBear_PitchDeck" data-project="proj3" style="background-image:url(designathon.jpg)">
-          <div class="item-text top-text">EcoBear, a Web Widget</div>
-          <div class="item-text bottom-text">Project (Wellesley College Designathon Winning) - 2024</div>
-        </div>
-        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/WiDS" data-project="proj4" style="background-image:url(wids.jpg)">
-          <div class="item-text top-text">ADHD Diagnosis for Women</div>
-          <div class="item-text bottom-text">Project (Kaggle "Women in Data Science" Hackathon Winning) - 2025</div>
-        </div>
-        <div class="item" tabindex="0" data-link="https://www.wellesleyhacks.org/" data-project="proj5" style="background-image:url(whack.jpg)">
-          <div class="item-text top-text">Wellesley College Hackathon Official Site</div>
-          <div class="item-text bottom-text">Webpage - Ongoing</div>
-        </div>
-        <div class="item" tabindex="0" data-link="https://github.com/xielun-laoshi/AI4ALL-Group-3D" data-project="proj6" style="background-image:url(ai4all.jpg)">
-          <div class="item-text top-text">Predicting Text Readability For Children Through Advanced NLP</div>
-          <div class="item-text bottom-text">Project (Affiliated with BreakThroughTech AI) - Ongoing</div>
-        </div>
-        <div class="item" tabindex="0" data-project="proj7" style="background-image:url(urop.jpg)">
-          <div class="item-text top-text">Research on ANN Filtered Vector Search</div>
-          <div class="item-text bottom-text">Project (Affiliated with MITCSAIL) - Ongoing</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="about-panel" id="aboutPanel">
     <div class="about-content">
       <h2></h2>
-      <p>I'm Sheron Yang. I reply to messages with memes and sometimes emojis. I make coffee. I'm also learning how to learn.</p>
+      <p>I find beauty in making the complicated feel effortless. My path blends research, engineering, and a spark for creative problem-solving — and I am always seeking new frontiers to learn, collaborate, and create technologies that leave a thoughtful mark.</p>
     </div>
   </div>
 
@@ -331,39 +296,187 @@
     <div class="about-content">
       <h2></h2>
       <p>
-        <a href="https://www.linkedin.com/in/sheron-yang-63833a329/" target="_blank" rel="noopener noreferrer">Linkedin</a><br />
-        <a href="https://github.com/xielun-laoshi" target="_blank" rel="noopener noreferrer">Github</a><br />
-        <a href="mailto:xy100@wellesley.edu" target="_blank" rel="noopener noreferrer">Mail</a>
+        <a href="https://www.linkedin.com/in/sheron-yang-63833a329/" target="_blank">Linkedin</a><br />
+        <a href="https://github.com/xielun-laoshi" target="_blank">Github</a><br />
+        <a href="mailto:xy100@wellesley.edu">Mail</a><br /><br /><br />
+        <a href="https://github.com/xielun-laoshi/mypage" target="_blank">See the sourcecode of this site!</a><br />
+      </p>
+    </div>
+  </div>
+  <div class="scroller-container">
+    <div class="scroller-content">
+      <div style="font-size: calc(var(--index) * 2); line-height: 1.8"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Subsidy Impact on China's EV Uptake</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">Paper - S.-T. Yau Science Award Nominated - 2022</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">China's Hog Futures Research</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">Paper - ICEMGD 7th - 2023</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">EcoBear, a Web Widget</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">Frontend - Wellesley College Designathon Winning - 2024</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">ADHD Diagnosis for Women</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Kaggle "Women in Data Science" Hackathon Top 10% Students - 2025</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Wellesley College Hackathon Official Site</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">Frontend - Ongoing</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Text Readability Prediction via Advanced NLP</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Affiliated with BreakThroughTech AI - Ongoing</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
+      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Research on ANN Filtered Vector Search</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Affiliated with MITCSAIL - Ongoing</div>
+    </div>
+  </div>
+  <div class="about-panel project-panel" id="project-EV">
+    <div class="about-content">
+      <h2></h2>
+      <h2>The Impact of Subsidy on EV Adoption: Evidence from China </h2>
+      <p><a href="The%20Impact%20of%20Subsidy%20on%20EV%20Adoption.pdf" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
+        My team and I investigated the impact of subsidy policies on EV adoption in China using city–month data from 15 cities between 2016 and 2019. We applied panel regression and instrumental variables—specifically the local-to-national subsidy ratio—to address endogeneity. Results show that a 10,000 Yuan increase in subsidies boosts EV sales by 6–11%, controlling for GDP, income, and charging infrastructure. We chose this period for its stable, consumer-focused policies. While subsidies significantly increased adoption, we also found that local industrial dynamics and consumers’ expectations of future policies influenced results. Due to limited data granularity and transparency, we recommend future research explore interactions among multiple policy tools and variations in consumer responses.
       </p>
     </div>
   </div>
 
-  <div class="about-panel project-panel" id="projectPanel">
+  <div class="about-panel project-panel" id="project-Hog">
     <div class="about-content">
-      <h2>Project Details</h2>
-      <p>Select a project to see details here.</p>
+      <h2><br>How Will the Hog Futures Smooth Price Fluctuations in China’s Pig Market</h2>
+      <p><a href="https://www.ewadirect.com/proceedings/aemps/article/view/5834" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
+      <p>My team and I researched how hog futures could reduce price volatility in China’s pig market, which has long faced cyclical fluctuations. Using the herding effect and cobweb model, we showed how irrational decisions and supply lags drive instability. We argued that hog futures provide essential functions—price discovery, hedging, vertical integration, and support for large-scale production—that can stabilize the market. Through theoretical analysis and a case study of Muyuan Food Co., we found that major producers began using futures to manage risk and inform production. However, high capital barriers and technical complexity limited small-scale farmer participation. Although China’s hog futures market remained nascent, we concluded it holds strong potential to enhance market stability, reduce volatility, and improve long-term risk management across the supply chain.
+      </p>
     </div>
   </div>
+
+  <div class="about-panel project-panel" id="project-EcoBear">
+    <div class="about-content">
+      <h2><br>EcoBear, a Web Widget for Sustainability and Green Development</h2>
+      <p><a href="https://www.figma.com/proto/wDbQlGfXqMhwAsZ1l9SQbn/EOCBEAR?page-id=0%3A1&node-id=203-4846&viewport=4166%2C66%2C0.77&t=SIy7WLy4w6ZA0vXg-1&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=112%3A3283" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
+      <p>My friends and I built EcoBear in a 2-day hacakthon. It is a web-widget to bridge the gap between consumers’ sustainable intentions and their actual shopping behavior. Most shoppers wanted to buy green but lacked clear, trustworthy information and were overwhelmed by greenwashing and convenience. Our tool integrated directly into shopping websites, automatically scanning products and displaying instant sustainability ratings using color-coded labels—green for sustainable, red for unsustainable. Users could click to learn more about certifications and evaluation criteria.<br>
+      To drive engagement, we gamified the experience with rewards and a friendly polar bear mascot. Eco-conscious users appreciated the badges and rewards, while casual shoppers responded well to clear alternatives and incentives. From our testing, we learned to make sustainability cues more prominent and reduce guilt-driven nudging.
+      </p>
+    </div>
+  </div>
+
+  <div class="about-panel project-panel" id="project-ADHD">
+    <div class="about-content">
+      <h2><br>Unraveling the Mysteries of the Female Brain: Sex Patterns in ADHD</h2>
+      <p><a href="https://github.com/xielun-laoshi/WiDS" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
+      <p>As a participant in the WiDS Datathon 2025, my mission was to analyze fMRI brain imaging data to uncover how biological sex influenced the presentation of ADHD. Teamed with friends, I analyzed neuroimaging (fMRI) data from over 1,000 pediatric subjects to predict biological sex and ADHD diagnosis. We engineered advanced statistical features and applied principal component analysis (PCA) for dimensionality reduction. Using Python and R, we built and evaluated predictive models including convolutional neural networks (CNN), random forests, and logistic regression  and contributed to advancing research into sex-specific neurobiological patterns associated with ADHD.</p>
+    </div>
+  </div>
+
+  <div class="about-panel project-panel" id="project-Hackathon">
+    <div class="about-content">
+      <h2><br>WHACK 2025: Wellesley College Annual Hackathon's Official Website</h2>
+      <p><a href="https://www.wellesleyhacks.org/" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
+      <p>Leading a samll team and building this site ;) Coming up soon!</p>
+    </div>
+  </div>
+
+  <div class="about-panel project-panel" id="project-Readability">
+    <div class="about-content">
+      <h2><br>Readability Assessment for Educational Texts Using Advanced NLP</h2>
+      <p><a href="https://github.com/xielun-laoshi/AI4ALL-Group-3D" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
+      <p>We proposed a project to develop a machine learning model that more accurately predicts the reading difficulty of educational texts than traditional formulas like Flesch-Kincaid or Lexile. These formulas rely on shallow features and often miss deeper semantic and syntactic complexity. Using datasets such as the CommonLit Readability Prize and CLEAR Corpus, we planned to combine baseline models (Ridge, Lasso) with advanced approaches like TF-IDF with LightGBM and BERT embeddings. Our model aimed to incorporate cohesion and syntactic features, evaluated using RMSE, to improve both accuracy and transparency in readability assessment for grades 3–12.</p>
+    </div>
+  </div>
+
+  <div class="about-panel project-panel" id="project-ANN">
+    <div class="about-content">
+      <h2>Research on ANN Filtered Vector Search</h2>
+      <p>I Collaborated with colleague at MITCSAIL and developed a scalable filtered ANN system that integrates graph-based indices and IVF structures to efficiently handle up to 100 million vectors and over 200,000 labels. Our system achieves 5× faster query speeds at 90% recall compared to ParlayIVF2 on SIFT100M and YFCC10M benchmarks, outperforming Filtered DiskANN, NHQ, and UNG. We optimized the C++ backend using SIMD filtering, cache-aware prefetching, flattened memory layouts, and bitset label masks, achieving near-linear scalability across 32 threads with dynamic scheduling and query reordering. I am currently leading independent research on memory-efficient vector quantization, integrating advanced algorithms like SymphonyQG and HNSW-Flash to further improve graph-based ANN performance.</p>
+    </div>
+  </div>
+
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const $ = (s) => document.querySelector(s);
-      const $$ = (s) => document.querySelectorAll(s);
-
       const aboutBtn = $(".about-me");
       const contactBtn = $(".contact-me");
       const siteTitle = $(".site-title");
-      const lines = $$(".line");
-      const mainContent = $("#mainContent");
+      const lightBtn = $(".light-mode");
+      const darkBtn = $(".dark-mode");
       const aboutPanel = $("#aboutPanel");
       const contactPanel = $("#contactPanel");
-      const projectPanel = $("#projectPanel");
-      const itemsContainer = $(".items");
-      const items = $$(".item");
-      const circleElement = $(".circle");
+      const projectsBtn = $(".projects-button");
+      const scroller = $(".scroller-container");
+      const aboutText = $(".about-text");
+      const allProjectPanels = document.querySelectorAll(".project-panel");
 
-      let expandedItem = null;
-      let isMouseDown = false;
+      const projectMap = {
+        "Subsidy Impact on China's EV Uptake": "project-EV",
+        "China's Hog Futures Research": "project-Hog",
+        "EcoBear, a Web Widget": "project-EcoBear",
+        "ADHD Diagnosis for Women": "project-ADHD",
+        "Wellesley College Hackathon Official Site": "project-Hackathon",
+        "Text Readability Prediction via Advanced NLP": "project-Readability",
+        "Research on ANN Filtered Vector Search": "project-ANN"
+      };
 
+      function togglePanel(showAbout, showContact) {
+        aboutPanel.classList.toggle("show", showAbout);
+        contactPanel.classList.toggle("show", showContact);
+        allProjectPanels.forEach(panel => panel.classList.remove("show"));
+      }
+
+      aboutBtn.addEventListener("click", () => {
+        togglePanel(!aboutPanel.classList.contains("show"), false);
+      });
+
+      contactBtn.addEventListener("click", () => {
+        togglePanel(false, !contactPanel.classList.contains("show"));
+      });
+
+      siteTitle.addEventListener("click", () => {
+        togglePanel(false, false);
+        scroller.classList.remove("show");
+        aboutText.classList.remove("hidden");
+      });
+
+      lightBtn.addEventListener("click", () => {
+        document.body.setAttribute("data-theme", "light");
+      });
+
+      darkBtn.addEventListener("click", () => {
+        document.body.setAttribute("data-theme", "dark");
+      });
+
+      projectsBtn.addEventListener("click", () => {
+        const showScroller = !scroller.classList.contains("show");
+        scroller.classList.toggle("show", showScroller);
+        aboutText.classList.toggle("hidden", showScroller);
+        togglePanel(false, false);
+      });
+
+      const titles = document.querySelectorAll(".scroller-content div[style*='font-family: \\'SpaceMono\\''][style*='font-size: calc(var(--index) * 2)'][style*='line-height: 0.05']");
+
+      titles.forEach((titleDiv) => {
+        titleDiv.classList.add("project-title"); // Add hover class
+        titleDiv.style.cursor = "pointer";
+        titleDiv.addEventListener("click", () => {
+          const projectId = projectMap[titleDiv.textContent.trim()];
+          const panel = document.getElementById(projectId);
+
+          // If panel is already visible, hide it
+          if (panel && panel.classList.contains("show")) {
+            panel.classList.remove("show");
+          } else {
+            // Otherwise, close all and show this one
+            allProjectPanels.forEach(p => p.classList.remove("show"));
+            if (panel) panel.classList.add("show");
+          }
+        });
+      });
+
+
+      // Mouse circle effect
+      const circleElement = document.querySelector('.circle');
       const mouse = { x: 0, y: 0 };
       const previousMouse = { x: 0, y: 0 };
       const circle = { x: 0, y: 0 };
@@ -371,154 +484,35 @@
       let currentAngle = 0;
       const speed = 0.17;
 
-      const projectDetails = {
-        proj1: { title: "Subsidy Impact on China's EV Uptake", description: "<br /> *Click on the picture again to see project details. <br /><br />This project was nominated for the S.-T. Yau Science Award in 2022." },
-        proj2: { title: "China's Hog Futures Research", description: "<br />  *Click on the picture again to see project details. <br /><br />Presented at ICEMGD 7th in 2023, focusing on futures market analysis." },
-        proj3: { title: "EcoBear, a Web Widget", description: "<br /> *Click on the picture again to see project details. <br /><br />Winning project at Wellesley College Designathon 2024." },
-        proj4: { title: "ADHD Diagnosis for Women", description: "<br /> *Click on the picture again to see project details. <br /><br />Kaggle 'Women in Data Science' Hackathon Winning project for 2025." },
-        proj5: { title: "Wellesley College Hackathon Official Site", description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing webpage project for Wellesley College Hackathon." },
-        proj6: { title: "Predicting Text Readability For Children", description: "<br /> *Click on the picture again to see project details. <br /><br />Project affiliated with BreakThroughTech AI, using advanced NLP." },
-        proj7: { title: "Research on ANN Filtered Vector Search", description: "<br /> *Click on the picture again to see project details. <br /><br />Ongoing project affiliated with MIT CSAIL." }
-      };
-
-      function togglePanel(showAbout, showContact, showProject) {
-        aboutPanel.classList.toggle("show", showAbout);
-        contactPanel.classList.toggle("show", showContact);
-        projectPanel.classList.toggle("show", showProject);
-
-        const anyPanel = showAbout || showContact || showProject;
-        lines.forEach((l) => l.classList.toggle("line-animate", anyPanel));
-        mainContent.classList.toggle("shrink", anyPanel);
-        itemsContainer.classList.toggle("shrink", anyPanel);
-      }
-
-      function showProjectContent(projectId) {
-        const panelTitle = projectPanel.querySelector("h2");
-        const panelDesc = projectPanel.querySelector("p");
-
-        if (projectDetails[projectId]) {
-          panelTitle.innerHTML = projectDetails[projectId].title;
-          panelDesc.innerHTML = projectDetails[projectId].description;
-        } else {
-          panelTitle.textContent = "Project Details";
-          panelDesc.textContent = "No additional information available.";
-        }
-      }
-
-      aboutBtn.addEventListener("click", () => {
-        if (expandedItem) {
-          expandedItem.classList.remove("active");
-          expandedItem = null;
-        }
-        const isOpen = aboutPanel.classList.contains("show");
-        togglePanel(!isOpen, false, false);
-      });
-
-      contactBtn.addEventListener("click", () => {
-        if (expandedItem) {
-          expandedItem.classList.remove("active");
-          expandedItem = null;
-        }
-        const isOpen = contactPanel.classList.contains("show");
-        togglePanel(false, !isOpen, false);
-      });
-
-      siteTitle.addEventListener("click", () => {
-        if (expandedItem) {
-          expandedItem.classList.remove("active");
-          expandedItem = null;
-        }
-        togglePanel(false, false, false);
-      });
-
-      items.forEach((item) => {
-        item.addEventListener("click", (e) => {
-          e.stopPropagation();
-
-          if (item === expandedItem) {
-            const link = item.dataset.link;
-            if (link) window.open(link, "_blank");
-            item.classList.remove("active");
-            expandedItem = null;
-            togglePanel(false, false, false);
-          } else {
-            if (expandedItem) {
-              expandedItem.classList.remove("active");
-            }
-            item.focus();
-            item.classList.add("active");
-            expandedItem = item;
-
-            const projectId = item.dataset.project;
-            showProjectContent(projectId);
-            togglePanel(false, false, true);
-          }
-        });
-      });
-
-      document.body.addEventListener("click", (e) => {
-        if (expandedItem && !e.target.closest(".item")) {
-          expandedItem.classList.remove("active");
-          expandedItem.blur();
-          expandedItem = null;
-          togglePanel(false, false, false);
-        }
-      }, { passive: true });
-
-      // Mouse position tracker
       window.addEventListener('mousemove', (e) => {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
-      });
-
-      window.addEventListener('mousedown', () => {
-        isMouseDown = true;
-      });
-
-      window.addEventListener('mouseup', () => {
-        isMouseDown = false;
+        mouse.x = e.x;
+        mouse.y = e.y;
       });
 
       const tick = () => {
-        // MOVE
         circle.x += (mouse.x - circle.x) * speed;
         circle.y += (mouse.y - circle.y) * speed;
         const translate = `translate(${circle.x}px, ${circle.y}px)`;
 
-        // VELOCITY + SCALE
         const deltaX = mouse.x - previousMouse.x;
         const deltaY = mouse.y - previousMouse.y;
         previousMouse.x = mouse.x;
         previousMouse.y = mouse.y;
+        const velocity = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2) * 4, 150);
+        const scaleValue = (velocity / 150) * 0.5;
+        currentScale += (scaleValue - currentScale) * speed;
+        const scale = `scale(${1 + currentScale}, ${1 - currentScale})`;
 
-        const velocity = Math.min(Math.sqrt(deltaX**2 + deltaY**2) * 4, 150);
-        const squeezeScale = (velocity / 150) * 0.6;
-        currentScale += (squeezeScale - currentScale) * speed;
-
-        const baseScale = isMouseDown ? 0.7 : 1;
-        const scale = `scale(${baseScale + currentScale}, ${baseScale - currentScale})`;
-
-        // ROTATE
         const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-        if (velocity > 20) {
-          currentAngle = angle;
-        }
+        if (velocity > 20) currentAngle = angle;
         const rotate = `rotate(${currentAngle}deg)`;
 
-        // Apply transform
         circleElement.style.transform = `${translate} ${rotate} ${scale}`;
 
         requestAnimationFrame(tick);
-      };
+      }
 
       tick();
-
-      // Loader fade
-      const loader = document.getElementById("loaderWrapper");
-      setTimeout(() => {
-        loader.style.display = "none";
-        document.body.style.overflow = "auto";
-      }, 1000);
     });
   </script>
 
