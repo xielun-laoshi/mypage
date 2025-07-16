@@ -89,6 +89,38 @@
       transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
     }
 
+    .iframe-mask-container {
+      position: relative;
+      width: 100%;
+      height: 100vh; /* adjust as needed */
+      overflow: hidden;
+    }
+
+    .iframe-mask-container iframe {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .mask {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 15%;
+      background: var(--bg-color); /* or whatever background color matches your page */
+      z-index: 0;
+      pointer-events: none; /* so clicks go through to the iframe */
+      transition: background 0.4s ease, color 0.4s ease;
+    }
+
+    .mask.top {
+      top: 0;
+    }
+
+    .mask.bottom {
+      bottom: 0;
+    }
+
     .site-title {
       font-family: "SpaceMono", monospace;
       font-size: calc(var(--index) * 2.5);
@@ -278,6 +310,12 @@
 
   <div class="line line-horizontal top-line"></div>
   <div class="line line-horizontal bottom-line"></div>
+  <div class="iframe-mask-container">
+    <iframe src="trial.html" width="100%" height="100%" frameborder="0"></iframe>
+    <div class="mask top"></div>
+    <div class="mask bottom"></div>
+  </div>
+
 
   <div class="about-panel" id="aboutPanel">
     <div class="about-content">
@@ -375,7 +413,7 @@
       <h2><br>WHACK 2025: Wellesley College Annual Hackathon's Official Website</h2>
       <p><a href="https://www.wellesleyhacks.org/" target="_blank" class="hover-link">
           *Click here to see project details.</a><h2></h2>
-      <p>Leading a samll team and building this site ;) Coming up soon!</p>
+      <p>Running a hackathon, leading a samll team and building this site ;) Coming up soon!</p>
     </div>
   </div>
 
