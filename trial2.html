@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sheron Loader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    @font-face {
+      font-family: "SpaceMono";
+      src: url("SF-Pro-Rounded-Light.otf") format("opentype");
+      font-weight: normal;
+      font-style: normal;
+    }
+
+    :root {
+      --text-color: #1a1a1a;
+      --bg-color: #d1d1d1;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg-color);
+      font-family: "SpaceMono", monospace;
+    }
+
+    .loader-wrapper {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loader {
+      font-size: 40px;
+      font-weight: bold;
+      color: var(--text-color);
+      background: conic-gradient(#000 0 0) 50% / 0 100% no-repeat text;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: l4 1.5s linear forwards;
+    }
+
+    .loader::before {
+      content: "Sheron Yang";
+    }
+
+    @keyframes l4 {
+      to {
+        background-size: 120% 100%;
+      }
+    }
+
+    .main-content {
+      display: none;
+      padding: 2rem;
+    }
+
+    .loaded .loader-wrapper {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loaded .main-content {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <!-- Loader overlay -->
+  <div class="loader-wrapper">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Main content -->
+  <div class="main-content">
+    <h1>Welcome to Sheron's Website</h1>
+    <p>This is the main content that appears after the loader.</p>
+  </div>
+
+  <script>
+    window.addEventListener("DOMContentLoaded", () => {
+      setTimeout(() => {
+        document.body.classList.add("loaded");
+      }, 1500); // Matches loader animation duration
+    });
+  </script>
+</body>
+</html>

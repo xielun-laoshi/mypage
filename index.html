@@ -12,6 +12,49 @@
       box-sizing: border-box;
     }
 
+    /* LOADER START */
+    .loader-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: var(--bg-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    }
+
+    .loader {
+      font-family: "SpaceMono", monospace;
+      font-size: 40px;
+      font-weight: bold;
+      color: var(--text-color);
+      background: conic-gradient(#000 0 0) 50% / 0 100% no-repeat text;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: l4 1.5s linear forwards;
+    }
+
+    .loader::before {
+      content: "Sheron Yang";
+    }
+
+    @keyframes l4 {
+      to {
+        background-size: 120% 100%;
+      }
+    }
+
+    .loader-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    /* LOADER END */
+
     @font-face {
       font-family: "SpaceMono";
       src: url("SF-Pro-Rounded-Light.otf") format("opentype");
@@ -307,6 +350,9 @@
 </head>
 <body data-theme="light">
   <div class="circle"></div>
+  <div class="loader-overlay" id="loader">
+    <div class="loader"></div>
+  </div>
   <div class="site-title" tabindex="0">Sheron Yang</div>
   <div class="about-me" tabindex="0">About</div>
   <div class="contact-me" tabindex="0">Contact</div>
@@ -447,6 +493,13 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
+      // LOADER: Hide after 1.5s
+      setTimeout(() => {
+        const loader = document.getElementById("loader");
+        if (loader) loader.classList.add("hidden");
+      }, 1500);
+
+      // ALL your existing JS remains unchanged below...
       const $ = (s) => document.querySelector(s);
       const aboutBtn = $(".about-me");
       const contactBtn = $(".contact-me");
@@ -508,25 +561,21 @@
       const titles = document.querySelectorAll(".scroller-content div[style*='font-family: \\'SpaceMono\\''][style*='font-size: calc(var(--index) * 2)'][style*='line-height: 0.05']");
 
       titles.forEach((titleDiv) => {
-        titleDiv.classList.add("project-title"); // Add hover class
+        titleDiv.classList.add("project-title");
         titleDiv.style.cursor = "pointer";
         titleDiv.addEventListener("click", () => {
           const projectId = projectMap[titleDiv.textContent.trim()];
           const panel = document.getElementById(projectId);
-
-          // If panel is already visible, hide it
           if (panel && panel.classList.contains("show")) {
             panel.classList.remove("show");
           } else {
-            // Otherwise, close all and show this one
             allProjectPanels.forEach(p => p.classList.remove("show"));
             if (panel) panel.classList.add("show");
           }
         });
       });
 
-
-      // Mouse circle effect
+      // Custom cursor animation
       const circleElement = document.querySelector('.circle');
       const mouse = { x: 0, y: 0 };
       const previousMouse = { x: 0, y: 0 };
@@ -559,7 +608,6 @@
         const rotate = `rotate(${currentAngle}deg)`;
 
         circleElement.style.transform = `${translate} ${rotate} ${scale}`;
-
         requestAnimationFrame(tick);
       }
 
