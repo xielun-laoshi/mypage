@@ -36,7 +36,7 @@
       -webkit-background-clip: text;
       background-clip: text;
       color: transparent;
-      animation: l4 1.5s linear forwards;
+      animation: l4 2.5s linear forwards;
     }
 
     .loader::before {
@@ -398,15 +398,15 @@
       <div style="font-size: calc(var(--index) * 2); line-height: 1.8"><br></div>
 
       <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Research on ANN Filtered Vector Search</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Affiliated with MITCSAIL - Ongoing</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Affiliated with MITCSAIL - 2025</div>
       <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
 
       <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Text Readability Prediction via Advanced NLP</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Affiliated with BreakThroughTech AI - Ongoing</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">ML / DS - Affiliated with BreakThroughTech AI - 2025</div>
       <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
 
       <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">Wellesley College Hackathon Official Site</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">Frontend - Ongoing</div>
+      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25">Frontend - 2025</div>
       <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--index) * 0.6); font-weight:900; line-height: 1.25"><br></div>
 
       <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--index) * 2); line-height: 0.05">ADHD Diagnosis for Women</div>
@@ -471,7 +471,7 @@
       <h2><br>WHACK 2025: Wellesley College Annual Hackathon's Official Website</h2>
       <p><a href="https://www.wellesleyhacks.org/" target="_blank" class="hover-link">
           *Click here to see project details.</a><h2></h2>
-      <p>Running a hackathon, leading a samll team and building this site ;) Coming up soon!</p>
+      <p>I led a team of four to create a full hackathon platform from scratch — including the main site, past event archive, merch designs, and all visual assets. It simplified everything from registration to judging and ran smoothly with 100+ active users during the event.</p>
     </div>
   </div>
 
@@ -487,7 +487,8 @@
   <div class="about-panel project-panel" id="project-ANN">
     <div class="about-content">
       <h2><br>Research on ANN Filtered Vector Search</h2>
-      <p>*Project details coming up soon.</p><h2></h2>
+      <p><a href="https://github.com/xielun-laoshi/big-ann-benchmarks" target="_blank" class="hover-link">
+          *Click here to see project details.</a><h2></h2>
       <p>I Collaborated with colleague at MITCSAIL and developed a scalable filtered ANN system that integrates graph-based indices and IVF structures to efficiently handle up to 100 million vectors and over 200,000 labels. Our system achieves 5× faster query speeds at 90% recall compared to ParlayIVF2 on SIFT100M and YFCC10M benchmarks, outperforming Filtered DiskANN, NHQ, and UNG. We optimized the C++ backend using SIMD filtering, cache-aware prefetching, flattened memory layouts, and bitset label masks, achieving near-linear scalability across 32 threads with dynamic scheduling and query reordering. I am currently leading independent research on memory-efficient vector quantization, integrating advanced algorithms like SymphonyQG and HNSW-Flash to further improve graph-based ANN performance.</p>
     </div>
   </div>
@@ -546,11 +547,20 @@
 
       lightBtn.addEventListener("click", () => {
         document.body.setAttribute("data-theme", "light");
+        document.querySelector("iframe").contentWindow.postMessage({
+          type: "THEME_CHANGE",
+          theme: "light"
+        }, "*");
       });
 
       darkBtn.addEventListener("click", () => {
         document.body.setAttribute("data-theme", "dark");
+        document.querySelector("iframe").contentWindow.postMessage({
+          type: "THEME_CHANGE",
+          theme: "dark"
+        }, "*");
       });
+
 
       projectsBtn.addEventListener("click", () => {
         const showScroller = !scroller.classList.contains("show");
@@ -614,6 +624,35 @@
 
       tick();
     });
+  </script>
+  <script>
+    (function(){
+      function postTheme(theme){
+        localStorage.setItem('theme', theme);
+        var iframe = document.querySelector('iframe');
+        try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'theme', theme: theme }, '*'); } catch(e){}
+      }
+
+      document.addEventListener('DOMContentLoaded', function(){
+        // ensure localStorage has initial theme matching body
+        var initial = document.body.getAttribute('data-theme') || 'light';
+        localStorage.setItem('theme', initial);
+        var iframe = document.querySelector('iframe');
+        try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'theme', theme: initial }, '*'); } catch(e){}
+
+        var light = document.querySelector('.light-mode');
+        var dark = document.querySelector('.dark-mode');
+
+        if (light) light.addEventListener('click', function(){
+          document.body.setAttribute('data-theme', 'light');
+          postTheme('light');
+        });
+        if (dark) dark.addEventListener('click', function(){
+          document.body.setAttribute('data-theme', 'dark');
+          postTheme('dark');
+        });
+      });
+    })();
   </script>
 </body>
 </html>

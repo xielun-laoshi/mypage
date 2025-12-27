@@ -56,16 +56,21 @@ class Scene {
         //     geometry.vertices.push( vertex );
         // }
         
-        const plane = new THREE.PlaneBufferGeometry(500, 250, 250, 125);
+        const plane = new THREE.PlaneBufferGeometry(500, 250, 400, 200);
         
         const textureLoader = new THREE.TextureLoader();
         textureLoader.crossOrigin = '';
         
+        // determine initial color from localStorage/body theme
+        var theme = (function(){ try { return localStorage.getItem('theme') || (document.body && document.body.getAttribute('data-theme')) || 'light'; } catch(e){ return 'light'; } })();
+        var initColor = theme === 'dark' ? new THREE.Color(1,1,1) : new THREE.Color(0,0,0);
+
         const material = new THREE.ShaderMaterial( {
             uniforms: {
                 time: { value: 1.0 },
                 texture:   { value: textureLoader.load( "https://s3-us-west-2.amazonaws.com/s.cdpn.io/1081752/spark1.png" ) },
-                resolution: { value: new THREE.Vector2() }
+                resolution: { value: new THREE.Vector2() },
+                uColor: { value: initColor }
 
             },
 
@@ -84,6 +89,27 @@ class Scene {
         this.particles.rotation.x = this.degToRad(-90);
 
         this.scene.add(this.particles);
+
+        // Listen for theme messages from parent and storage changes
+        window.addEventListener('message', (e) => {
+            try {
+                if (!e.data) return;
+                if (e.data.type === 'theme') {
+                    var col = e.data.theme === 'dark' ? new THREE.Color(1,1,1) : new THREE.Color(0,0,0);
+                    if (this.particles && this.particles.material && this.particles.material.uniforms && this.particles.material.uniforms.uColor) this.particles.material.uniforms.uColor.value = col;
+                }
+            } catch(err){}
+        });
+
+        // storage event (other windows) fallback
+        window.addEventListener('storage', (e) => {
+            try {
+                if (e.key === 'theme') {
+                    var col = e.newValue === 'dark' ? new THREE.Color(1,1,1) : new THREE.Color(0,0,0);
+                    if (this.particles && this.particles.material && this.particles.material.uniforms && this.particles.material.uniforms.uColor) this.particles.material.uniforms.uColor.value = col;
+                }
+            } catch(err){}
+        });
     }
     
     createLights() {
