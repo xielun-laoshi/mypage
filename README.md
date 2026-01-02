@@ -2,6 +2,5 @@
 This is the sourcecode for my personal website.   
 Some design and composition ideas come from Keita Yamada's Portfolio: https://p5aholic.me/   
 The ThreeJS animation got its ideas and is referenced from: https://codepen.io/Callum-Martin/pen/KoaMgM     
-The elastic cursor idea comes from: https://codepen.io/gusevdigital/pen/MWxyXRa     
-The loader idea comes from: https://css-loaders.com/filling/     
+The elastic cursor idea comes from: https://codepen.io/gusevdigital/pen/MWxyXRa  
 Hope you enjoyed the design!
