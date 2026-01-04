@@ -525,7 +525,7 @@
       let iframeReady = false;
       let minDelayReached = false;
       const loadStartTime = Date.now();
-      const MIN_LOADER_DURATION = 2500; // 2.5 seconds
+      const MIN_LOADER_DURATION = 3000; // 2.5 seconds
 
       // Check if fonts are loaded using Font Loading API
       if (document.fonts) {
@@ -572,14 +572,6 @@
           if (loader) loader.classList.add("hidden");
         }
       }
-
-      // Fallback: hide loader after max 3 seconds even if not all conditions met
-      setTimeout(() => {
-        if (loader && !loader.classList.contains("hidden")) {
-          console.log("Timeout reached - hiding loader");
-          loader.classList.add("hidden");
-        }
-      }, 3000);
 
       // ALL your existing JS remains unchanged below...
       const $ = (s) => document.querySelector(s);

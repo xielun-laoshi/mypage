@@ -73,7 +73,7 @@ class Scene {
         //     geometry.vertices.push( vertex );
         // }
         
-        const plane = new THREE.PlaneBufferGeometry(700, 200, 600, 200);
+        const plane = new THREE.PlaneBufferGeometry(700, 190, 600, 190);
         
         this.textureLoader.crossOrigin = '';
         
