@@ -364,9 +364,9 @@
         transform: none;
       }
 
-      .about-me {top: 6vh;}
-      .contact-me {top: 9vh;}
-      .projects-button {top: 12vh;}
+      .about-me {top: 5.5vh;}
+      .contact-me {top: 8.5vh;}
+      .projects-button {top: 11.5vh;}
       .light-mode {bottom: 12vh;}
       .dark-mode {bottom: 9vh;}
     }
@@ -519,11 +519,67 @@
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      // LOADER: Hide after 1.5s
+      const loader = document.getElementById("loader");
+      let fontsReady = false;
+      let threejsReady = false;
+      let iframeReady = false;
+      let minDelayReached = false;
+      const loadStartTime = Date.now();
+      const MIN_LOADER_DURATION = 2500; // 2.5 seconds
+
+      // Check if fonts are loaded using Font Loading API
+      if (document.fonts) {
+        document.fonts.ready.then(() => {
+          fontsReady = true;
+          console.log("Fonts loaded");
+          checkAllLoaded();
+        });
+      } else {
+        // Fallback for browsers without Font Loading API
+        fontsReady = true;
+      }
+
+      // Listen for iframe load event
+      const iframe = document.querySelector("iframe");
+      if (iframe) {
+        iframe.addEventListener("load", () => {
+          iframeReady = true;
+          console.log("Iframe loaded");
+          checkAllLoaded();
+        });
+      }
+
+      // Listen for Three.js ready message from iframe
+      window.addEventListener("message", (event) => {
+        if (event.data && event.data.type === "threejs-ready") {
+          threejsReady = true;
+          console.log("Three.js ready");
+          checkAllLoaded();
+        }
+      });
+
+      // Enforce minimum loader duration
       setTimeout(() => {
-        const loader = document.getElementById("loader");
-        if (loader) loader.classList.add("hidden");
-      }, 1500);
+        minDelayReached = true;
+        console.log("Minimum loader duration (1.5s) reached");
+        checkAllLoaded();
+      }, MIN_LOADER_DURATION);
+
+      // Function to check if all assets are loaded
+      function checkAllLoaded() {
+        if (fontsReady && threejsReady && iframeReady && minDelayReached) {
+          console.log("All assets loaded and minimum duration reached - hiding loader");
+          if (loader) loader.classList.add("hidden");
+        }
+      }
+
+      // Fallback: hide loader after max 3 seconds even if not all conditions met
+      setTimeout(() => {
+        if (loader && !loader.classList.contains("hidden")) {
+          console.log("Timeout reached - hiding loader");
+          loader.classList.add("hidden");
+        }
+      }, 3000);
 
       // ALL your existing JS remains unchanged below...
       const $ = (s) => document.querySelector(s);

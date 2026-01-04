@@ -9,6 +9,7 @@ class Scene {
         
         this.spheres = [];
         this.lightSystems = [];
+        this.assetsLoaded = false;
 
         this.bindAll();
         this.init();
@@ -21,7 +22,23 @@ class Scene {
     }
     
     init() {
-        this.textureLoader = new THREE.TextureLoader();
+        // Set up loading manager to track texture loads
+        const loadingManager = new THREE.LoadingManager();
+        
+        loadingManager.onLoad = () => {
+            this.assetsLoaded = true;
+            // Notify parent window that Three.js assets are ready
+            if (window.parent) {
+                window.parent.postMessage({ type: 'threejs-ready' }, '*');
+            }
+            console.log('Three.js assets loaded');
+        };
+        
+        loadingManager.onError = (url) => {
+            console.warn('Error loading:', url);
+        };
+        
+        this.textureLoader = new THREE.TextureLoader(loadingManager);
                                                 // 40
         this.camera = new THREE.PerspectiveCamera( 15, window.innerWidth / window.innerHeight, 1, 2000 );
 		this.camera.position.z = 10; //450
@@ -56,10 +73,9 @@ class Scene {
         //     geometry.vertices.push( vertex );
         // }
         
-        const plane = new THREE.PlaneBufferGeometry(700, 240, 600, 240);
+        const plane = new THREE.PlaneBufferGeometry(700, 200, 600, 200);
         
-        const textureLoader = new THREE.TextureLoader();
-        textureLoader.crossOrigin = '';
+        this.textureLoader.crossOrigin = '';
         
         // determine initial color from localStorage/body theme
         var theme = (function(){ try { return localStorage.getItem('theme') || (document.body && document.body.getAttribute('data-theme')) || 'light'; } catch(e){ return 'light'; } })();
@@ -68,7 +84,7 @@ class Scene {
         const material = new THREE.ShaderMaterial( {
             uniforms: {
                 time: { value: 1.0 },
-                texture:   { value: textureLoader.load( "https://s3-us-west-2.amazonaws.com/s.cdpn.io/1081752/spark1.png" ) },
+                texture:   { value: this.textureLoader.load( "https://s3-us-west-2.amazonaws.com/s.cdpn.io/1081752/spark1.png" ) },
                 resolution: { value: new THREE.Vector2() },
                 uColor: { value: initColor }
 
