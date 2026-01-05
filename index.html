@@ -695,6 +695,35 @@
       }
 
       tick();
+
+      // Adjust the top/bottom masks to match the positions of the top/bottom lines
+      function updateMasks() {
+        const topLine = document.querySelector('.top-line');
+        const bottomLine = document.querySelector('.bottom-line');
+        const topMask = document.querySelector('.mask.top');
+        const bottomMask = document.querySelector('.mask.bottom');
+        if (!topLine || !bottomLine || !topMask || !bottomMask) return;
+
+        const h = window.innerHeight || document.documentElement.clientHeight;
+        const topRect = topLine.getBoundingClientRect();
+        const bottomRect = bottomLine.getBoundingClientRect();
+
+        // Percentage of viewport above the top line
+        let topPercent = (topRect.top / h) * 100;
+        // Percentage of viewport below the bottom line (from bottom line's top to viewport bottom)
+        let bottomPercent = ((h - bottomRect.top) / h) * 100;
+
+        topPercent = Math.max(0, Math.min(100, topPercent));
+        bottomPercent = Math.max(0, Math.min(100, bottomPercent));
+
+        // Apply as vh so it scales with viewport height
+        topMask.style.height = topPercent + 'vh';
+        bottomMask.style.height = bottomPercent + 'vh';
+      }
+
+      // Run once on load and when the viewport changes
+      updateMasks();
+      window.addEventListener('resize', updateMasks);
     });
   </script>
   <script>
