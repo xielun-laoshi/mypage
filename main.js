@@ -45,7 +45,6 @@
     wireUpButtons();
     wireUpProjectTitles();
     startCursor();
-    setupMasks();
   });
 
   /* ------------------------------------------------------------------------
@@ -276,35 +275,5 @@
       requestAnimationFrame(tick);
     };
     tick();
-  }
-
-  /* ------------------------------------------------------------------------
-     Keep the top/bottom masks aligned with the top/bottom decoration lines
-     so the iframe content never bleeds past them.
-     ------------------------------------------------------------------------ */
-  function setupMasks() {
-    const topLine    = $(".top-line");
-    const bottomLine = $(".bottom-line");
-    const topMask    = $(".mask.top");
-    const bottomMask = $(".mask.bottom");
-
-    if (!topLine || !bottomLine || !topMask || !bottomMask) return;
-
-    const clamp = (n) => Math.max(0, Math.min(100, n));
-
-    function updateMasks() {
-      const h = window.innerHeight || document.documentElement.clientHeight;
-      const topRect    = topLine.getBoundingClientRect();
-      const bottomRect = bottomLine.getBoundingClientRect();
-
-      const topPercent    = clamp((topRect.top / h) * 100);
-      const bottomPercent = clamp(((h - bottomRect.top) / h) * 100);
-
-      topMask.style.height    = topPercent + "vh";
-      bottomMask.style.height = bottomPercent + "vh";
-    }
-
-    updateMasks();
-    window.addEventListener("resize", updateMasks);
   }
 })();
