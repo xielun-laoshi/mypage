@@ -7,382 +7,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="preload" href="SF-Pro-Rounded-Light.otf" as="font" type="font/otf" crossorigin="anonymous" />
   <link rel="preload" href="SF-Pro-Rounded-Medium.otf" as="font" type="font/otf" crossorigin="anonymous" />
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
 
-    /* LOADER START */
-    .loader-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: var(--bg-color);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      transition: opacity 0.3s ease;
-    }
+  <!-- Seed localStorage with the page's initial theme synchronously,
+       so the iframe (which reads localStorage at startup) picks the right
+       particle color on first load. Must run before the iframe parses. -->
+  <script>
+    try { localStorage.setItem("theme", "dark"); } catch (e) { /* ignore */ }
+  </script>
 
-    .loader {
-      font-family: "SpaceMono", monospace;
-      font-size: 40px;
-      font-weight: bold;
-      color: var(--text-color);
-      background: conic-gradient(var(--text-color) 0 0) 50% / 0 100% no-repeat text;
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      animation: l4 2.5s linear forwards;
-    }
-
-    .loader::before {
-      content: "Sheron Yang";
-    }
-
-    @keyframes l4 {
-      to {
-        background-size: 120% 100%;
-      }
-    }
-
-    .loader-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    /* LOADER END */
-
-    @font-face {
-      font-family: "SpaceMono";
-      src: url("SF-Pro-Rounded-Light.otf") format("opentype");
-      font-weight: normal;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    @font-face {
-      font-family: "SpaceMonoBold";
-      src: url("SF-Pro-Rounded-Medium.otf") format("opentype");
-      font-weight: bold;
-      font-style: normal;
-      font-display: swap;
-    }
-
-    :root {
-      --index: calc(2.8vh);
-      --i: calc(1vw + 1vh);
-      --bg-color: #d1d1d1;
-      --text-color: #1a1a1a;
-      --line-color: #1a1a1a;
-      --panel-border: #1a1a1a;
-      --cursor-border: #1a1a1a;
-      --canvas-bg: #d1d1d1;
-    }
-
-    [data-theme="dark"] {
-      --bg-color: #131313;
-      --text-color: #c6c6c6;
-      --line-color: #c6c6c6;
-      --panel-border: #c6c6c6;
-      --cursor-border: #c6c6c6;
-      --canvas-bg: #131313;
-    }
-
-    html, body {
-      background: var(--bg-color);
-      color: var(--text-color);
-      overflow: hidden;
-      height: 100%;
-      transition: background 0.4s ease, color 0.4s ease;
-    }
-
-    .circle {
-      --circle-size: 40px;
-      position: fixed;
-      height: var(--circle-size);
-      width: var(--circle-size);
-      border: 1px solid var(--cursor-border);
-      border-radius: 100%;
-      top: calc(var(--circle-size) / 2 * -1);
-      left: calc(var(--circle-size) / 2 * -1);
-      pointer-events: none;
-      z-index: 9999;
-    }
-
-    .site-title,
-    .about-me,
-    .contact-me,
-    .light-mode,
-    .dark-mode,
-    .projects-button {
-      color: var(--text-color);
-      user-select: none;
-      z-index: 10;
-    }
-
-    .site-title:hover,
-    .about-me:hover,
-    .contact-me:hover,
-    .light-mode:hover,
-    .dark-mode:hover,
-    .projects-button:hover,
-    .project-title:hover,
-    .hover-link:hover {
-      opacity: 0.25;
-      transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
-    }
-
-    .iframe-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 1; /* above iframe, below masks and circle */
-      pointer-events: auto; /* capture mouse events */
-      background: transparent;
-    }
-    
-    .iframe-mask-container {
-      position: relative;
-      width: 100%;
-      height: 100vh; /* adjust as needed */
-      overflow: hidden;
-    }
-
-    .iframe-mask-container iframe {
-      width: 100%;
-      height: 90%;
-      display: block;
-    }
-
-    .mask {
-      position: absolute;
-      left: 0;
-      width: 100svw;
-      height: 15svh;
-      background: var(--bg-color); /* or whatever background color matches your page */
-      z-index: 0;
-      pointer-events: none; /* so clicks go through to the iframe */
-      transition: background 0.4s ease, color 0.4s ease;
-    }
-
-    .mask.top {
-      top: 0;
-    }
-
-    .mask.bottom {
-      bottom: 0;
-    }
-
-    .site-title {
-      font-family: "SpaceMono", monospace;
-      font-size: calc(var(--index) * 1.7 + var(--i) * 0.5);
-      position: fixed;
-      font-weight: 1000;
-      letter-spacing: 0.05em;
-      top: 3vh;
-      left: 2.5vw;
-      pointer-events: auto;
-      cursor: pointer;
-    }
-
-    .about-me, .contact-me, .light-mode, .dark-mode, .projects-button {
-      font-family: "SpaceMonoBold", monospace;
-      font-size: calc(var(--index) * 0.65);
-      font-weight: 1000;
-      position: fixed;
-      cursor: pointer;
-    }
-
-    .about-me {
-      top: 11.3vh;
-      right: 1.5vw;
-    }
-
-    .contact-me {
-      top: 11.3vh;
-      right: 5.5vw;
-    }
-
-    .projects-button {
-      top: 11.3vh;
-      right: 10.4vw;
-    }
-
-    .light-mode {
-      bottom: 11.3vh;
-      right: 1.5vw;
-    }
-
-    .dark-mode {
-      bottom: 11.3vh;
-      right: 5vw;
-    }
-
-    .about-text {
-      font-family: "SpaceMonoBold", monospace;
-      font-size: calc(var(--index) * 0.65);
-      font-weight: 1000;
-      position: fixed;
-      bottom: calc(15vh + 3vh);
-      left: 2vw;
-      color: var(--text-color);
-      z-index: 10;
-      user-select: none;
-      transition: color 0.4s ease, opacity 0.4s ease;
-    }
-
-    .line {
-      position: fixed;
-      background: var(--line-color);
-      z-index: 10;
-      transition: background 0.4s ease;
-    }
-
-    .line-horizontal {
-      height: 1px;
-      width: 100vw;
-      left: 0;
-    }
-
-    .top-line {
-      top: 15vh;
-      right: 0;
-    }
-
-    .bottom-line {
-      bottom: 15vh;
-      right: 0;
-    }
-
-    .scroller-container {
-      position: fixed;
-      align-items: center;
-      top: 15vh;
-      left: 1.1vw;
-      width: 70%;
-      height: 70vh;
-      overflow-y: auto;
-      padding: 20px;
-      background: transparent;
-      scrollbar-width: none;
-      opacity: 0;
-      pointer-events: none;
-      z-index: 9;
-      transition: opacity 0.4s ease;
-    }
-
-    .scroller-container.show {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    .about-text.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-    
-    .scroller-container::-webkit-scrollbar {
-      display: none;
-    }
-    
-    .scroller-content div {
-      font-family: "SpaceMono", monospace;
-      font-size: calc(var(--index) * 2.3);
-      margin-bottom: 30px;
-      line-height: 1.75;
-    }
-
-    .about-panel {
-      position: fixed;
-      top: 0;
-      right: 0;
-      height: 100vh;
-      width: 30vw;
-      background: var(--bg-color);
-      color: var(--text-color);
-      border-left: 1px solid var(--panel-border);
-      font-family: "SpaceMono", monospace;
-      overflow: hidden;
-      z-index: 8;
-      transform: translateX(100%);
-      padding: 0;
-      transition: transform 0.8s ease, padding 0.8s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
-    }
-
-    .about-panel.show {
-      transform: translateX(0);
-      font-weight:900;
-      padding: 17vh 3vw 2vh 4vw;
-    }
-
-    .about-content {
-      opacity: 0;
-      transform: translateX(30%);
-      transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s, color 0.4s ease;
-      font-size: calc(var(--i) * 0.65);
-      line-height: 1.25;
-      word-spacing: 0.05em;
-      letter-spacing: 0.05em;
-      font-weight: bold;
-      color: var(--text-color);
-    }
-
-    .about-content h2 {
-      font-family: "SpaceMonoBold", monospace;
-      font-size: calc(var(--i) * 0.7);
-      font-weight: bold;
-      margin-bottom: 1rem;
-      letter-spacing: 0em;
-      word-spacing: 0em;
-    }
-
-    .about-panel.show .about-content {
-      opacity: 1;
-      transform: translateX(0);
-    }
-
-    a {
-      color: inherit;
-      text-decoration: none;
-    }
-
-    @media (max-width: 950px) {
-      .about-me,
-      .contact-me,
-      .light-mode,
-      .dark-mode,
-      .projects-button {
-        right: 1.2vw;
-        font-size: calc(var(--index) * 0.6);
-        transform: none;
-      }
-
-      .about-me {top: 5.5vh;}
-      .contact-me {top: 8.5vh;}
-      .projects-button {top: 11.5vh;}
-      .light-mode {bottom: 12vh;}
-      .dark-mode {bottom: 9vh;}
-    }
-  </style>
+  <link rel="stylesheet" href="main.css" />
 </head>
 <body data-theme="dark">
   <div class="circle"></div>
+
   <div class="loader-overlay" id="loader">
     <div class="loader"></div>
   </div>
+
   <div class="site-title" tabindex="0">Sheron Yang</div>
   <div class="about-me" tabindex="0">About</div>
   <div class="contact-me" tabindex="0">Contact</div>
   <div class="light-mode" tabindex="0">Light</div>
   <div class="dark-mode" tabindex="0">Dark</div>
   <div class="projects-button" tabindex="0">Projects</div>
+
   <div class="about-text">Hi there!<br>
     I'm Sheron Yang<br>
     When you are reading this I'm siping coffee.<br>
@@ -391,6 +39,7 @@
 
   <div class="line line-horizontal top-line"></div>
   <div class="line line-horizontal bottom-line"></div>
+
   <div class="iframe-mask-container">
     <div class="iframe-overlay"></div>
     <iframe src="trial.html" width="100%" height="100%" frameborder="0"></iframe>
@@ -398,7 +47,7 @@
     <div class="mask bottom"></div>
   </div>
 
-
+  <!-- About / Contact side panels -->
   <div class="about-panel" id="aboutPanel">
     <div class="about-content">
       <h2></h2>
@@ -417,44 +66,19 @@
       </p>
     </div>
   </div>
+
+  <!-- Scroller: project list is generated by main.js from the PROJECTS array -->
   <div class="scroller-container">
-    <div class="scroller-content">
-      <div style="font-size: calc(var(--index) * 2); line-height: 1.8"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">Research on ANN Filtered Vector Search</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">ML / DS - Affiliated with MITCSAIL - 2025</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">Text Readability Prediction via Advanced NLP</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">ML / DS - Affiliated with BreakThroughTech AI - 2025</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">Wellesley College Hackathon Official Site</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">Frontend - 2025</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">ADHD Diagnosis for Women</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">ML / DS - Kaggle "Women in Data Science" Hackathon Top 10% Students - 2025</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">EcoBear, a Web Widget</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">Frontend - Wellesley College Designathon Winning - 2024</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">China's Hog Futures Research</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">Paper - ICEMGD 7th - 2023</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25"><br></div>
-
-      <div style="font-family: 'SpaceMono', monospace; font-size: calc(var(--i) * 2); line-height: 1.05">Subsidy Impact on China's EV Uptake</div>
-      <div style="font-family: 'SpaceMonoBold', monospace; font-size: calc(var(--i) * 0.6); font-weight:900; line-height: 1.25; margin-top: -1.5em;">Paper - S.-T. Yau Science Award Nominated - 2022</div>
-    </div>
+    <div class="scroller-content"></div>
   </div>
+
+  <!-- Project detail panels -->
   <div class="about-panel project-panel" id="project-EV">
     <div class="about-content">
       <h2></h2>
       <h2>The Impact of Subsidy on EV Adoption: Evidence from China </h2>
       <p><a href="The%20Impact%20of%20Subsidy%20on%20EV%20Adoption.pdf" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
         My team and I investigated the impact of subsidy policies on EV adoption in China using city–month data from 15 cities between 2016 and 2019. We applied panel regression and instrumental variables—specifically the local-to-national subsidy ratio—to address endogeneity. Results show that a 10,000 Yuan increase in subsidies boosts EV sales by 6–11%, controlling for GDP, income, and charging infrastructure. We chose this period for its stable, consumer-focused policies. While subsidies significantly increased adoption, we also found that local industrial dynamics and consumers’ expectations of future policies influenced results. Due to limited data granularity and transparency, we recommend future research explore interactions among multiple policy tools and variations in consumer responses.
       </p>
     </div>
@@ -464,7 +88,7 @@
     <div class="about-content">
       <h2><br>How Will the Hog Futures Smooth Price Fluctuations in China’s Pig Market</h2>
       <p><a href="https://www.ewadirect.com/proceedings/aemps/article/view/5834" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
       <p>My team and I researched how hog futures could reduce price volatility in China’s pig market, which has long faced cyclical fluctuations. Using the herding effect and cobweb model, we showed how irrational decisions and supply lags drive instability. We argued that hog futures provide essential functions—price discovery, hedging, vertical integration, and support for large-scale production—that can stabilize the market. Through theoretical analysis and a case study of Muyuan Food Co., we found that major producers began using futures to manage risk and inform production. However, high capital barriers and technical complexity limited small-scale farmer participation. Although China’s hog futures market remained nascent, we concluded it holds strong potential to enhance market stability, reduce volatility, and improve long-term risk management across the supply chain.
       </p>
     </div>
@@ -474,7 +98,7 @@
     <div class="about-content">
       <h2><br>EcoBear, a Web Widget for Sustainability and Green Development</h2>
       <p><a href="https://www.figma.com/proto/wDbQlGfXqMhwAsZ1l9SQbn/EOCBEAR?page-id=0%3A1&node-id=203-4846&viewport=4166%2C66%2C0.77&t=SIy7WLy4w6ZA0vXg-1&scaling=min-zoom&content-scaling=fixed&starting-point-node-id=112%3A3283" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
       <p>My friends and I built EcoBear in a 2-day hacakthon, a web-widget to bridge the gap between consumers’ sustainable intentions and their actual shopping behavior. Most shoppers wanted to buy green but lacked clear, trustworthy information and were overwhelmed by greenwashing and convenience. Our tool integrated directly into shopping websites, automatically scanning products and displaying instant sustainability ratings using color-coded labels—green for sustainable, red for unsustainable. Users could click to learn more about certifications and evaluation criteria.<br>
       To drive engagement, we gamified the experience with rewards and a friendly polar bear mascot. Eco-conscious users appreciated the badges and rewards, while casual shoppers responded well to clear alternatives and incentives. From our testing, we learned to make sustainability cues more prominent and reduce guilt-driven nudging.
       </p>
@@ -485,7 +109,7 @@
     <div class="about-content">
       <h2><br>Unraveling the Mysteries of the Female Brain: Sex Patterns in ADHD</h2>
       <p><a href="https://github.com/xielun-laoshi/WiDS" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
       <p>As a participant in the WiDS Datathon 2025, I was to analyze fMRI brain imaging data to uncover how biological sex influenced the presentation of ADHD. Me and my teammates analyzed neuroimaging (fMRI) data from over 1,000 pediatric subjects to predict biological sex and ADHD diagnosis. We engineered advanced statistical features and applied principal component analysis (PCA) for dimensionality reduction. Using Python and R, we built and evaluated predictive models including convolutional neural networks (CNN), random forests, and logistic regression  and contributed to advancing research into sex-specific neurobiological patterns associated with ADHD.</p>
     </div>
   </div>
@@ -494,7 +118,7 @@
     <div class="about-content">
       <h2><br>WHACK 2025: Wellesley College Annual Hackathon's Official Website</h2>
       <p><a href="https://www.wellesleyhacks.org/" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
       <p>I led a team of four to create a full hackathon platform from scratch — including the main site, past event archive, merch designs, and all visual assets. It simplified everything from registration to judging and ran smoothly with 100+ active users during the event.</p>
     </div>
   </div>
@@ -503,7 +127,7 @@
     <div class="about-content">
       <h2><br>Readability Assessment for Educational Texts Using Advanced NLP</h2>
       <p><a href="https://github.com/xielun-laoshi/AI4ALL-Group-3D" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
       <p>Our team proposed a machine learning model that more accurately predicts the reading difficulty of educational texts than traditional formulas like Flesch-Kincaid or Lexile. These formulas rely on shallow features and often miss deeper semantic and syntactic complexity. Using datasets such as the CommonLit Readability Prize and CLEAR Corpus, we planned to combine baseline models (Ridge, Lasso) with advanced approaches like TF-IDF with LightGBM and BERT embeddings. Our model aimed to incorporate cohesion and syntactic features, evaluated using RMSE, to improve both accuracy and transparency in readability assessment for grades 3–12.</p>
     </div>
   </div>
@@ -512,248 +136,11 @@
     <div class="about-content">
       <h2><br>Research on ANN Filtered Vector Search</h2>
       <p><a href="https://github.com/xielun-laoshi/big-ann-benchmarks" target="_blank" class="hover-link">
-          *Click here to see project details.</a><h2></h2>
+        *Click here to see project details.</a><h2></h2>
       <p>Me and my colleague at MITCSAIL and developed a scalable filtered ANN system that integrates graph-based indices and IVF structures to efficiently handle up to 100 million vectors and over 200,000 labels. Our system achieves 5× faster query speeds at 90% recall compared to ParlayIVF2 on SIFT100M and YFCC10M benchmarks, outperforming Filtered DiskANN, NHQ, and UNG. We optimized the C++ backend using SIMD filtering, cache-aware prefetching, flattened memory layouts, and bitset label masks, achieving near-linear scalability across 32 threads with dynamic scheduling and query reordering. I am currently leading independent research on memory-efficient vector quantization, integrating advanced algorithms like SymphonyQG and HNSW-Flash to further improve graph-based ANN performance.</p>
     </div>
   </div>
 
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const loader = document.getElementById("loader");
-      let fontsReady = false;
-      let threejsReady = false;
-      let iframeReady = false;
-      let minDelayReached = false;
-      const loadStartTime = Date.now();
-      const MIN_LOADER_DURATION = 3000; // 2.5 seconds
-
-      // Check if fonts are loaded using Font Loading API
-      if (document.fonts) {
-        document.fonts.ready.then(() => {
-          fontsReady = true;
-          console.log("Fonts loaded");
-          checkAllLoaded();
-        });
-      } else {
-        // Fallback for browsers without Font Loading API
-        fontsReady = true;
-      }
-
-      // Listen for iframe load event
-      const iframe = document.querySelector("iframe");
-      if (iframe) {
-        iframe.addEventListener("load", () => {
-          iframeReady = true;
-          console.log("Iframe loaded");
-          checkAllLoaded();
-        });
-      }
-
-      // Listen for Three.js ready message from iframe
-      window.addEventListener("message", (event) => {
-        if (event.data && event.data.type === "threejs-ready") {
-          threejsReady = true;
-          console.log("Three.js ready");
-          checkAllLoaded();
-        }
-      });
-
-      // Enforce minimum loader duration
-      setTimeout(() => {
-        minDelayReached = true;
-        console.log("Minimum loader duration (1.5s) reached");
-        checkAllLoaded();
-      }, MIN_LOADER_DURATION);
-
-      // Function to check if all assets are loaded
-      function checkAllLoaded() {
-        if (fontsReady && threejsReady && iframeReady && minDelayReached) {
-          console.log("All assets loaded and minimum duration reached - hiding loader");
-          if (loader) loader.classList.add("hidden");
-        }
-      }
-
-      // ALL your existing JS remains unchanged below...
-      const $ = (s) => document.querySelector(s);
-      const aboutBtn = $(".about-me");
-      const contactBtn = $(".contact-me");
-      const siteTitle = $(".site-title");
-      const lightBtn = $(".light-mode");
-      const darkBtn = $(".dark-mode");
-      const aboutPanel = $("#aboutPanel");
-      const contactPanel = $("#contactPanel");
-      const projectsBtn = $(".projects-button");
-      const scroller = $(".scroller-container");
-      const aboutText = $(".about-text");
-      const allProjectPanels = document.querySelectorAll(".project-panel");
-
-      const projectMap = {
-        "Subsidy Impact on China's EV Uptake": "project-EV",
-        "China's Hog Futures Research": "project-Hog",
-        "EcoBear, a Web Widget": "project-EcoBear",
-        "ADHD Diagnosis for Women": "project-ADHD",
-        "Wellesley College Hackathon Official Site": "project-Hackathon",
-        "Text Readability Prediction via Advanced NLP": "project-Readability",
-        "Research on ANN Filtered Vector Search": "project-ANN"
-      };
-
-      function togglePanel(showAbout, showContact) {
-        aboutPanel.classList.toggle("show", showAbout);
-        contactPanel.classList.toggle("show", showContact);
-        allProjectPanels.forEach(panel => panel.classList.remove("show"));
-      }
-
-      aboutBtn.addEventListener("click", () => {
-        togglePanel(!aboutPanel.classList.contains("show"), false);
-      });
-
-      contactBtn.addEventListener("click", () => {
-        togglePanel(false, !contactPanel.classList.contains("show"));
-      });
-
-      siteTitle.addEventListener("click", () => {
-        togglePanel(false, false);
-        scroller.classList.remove("show");
-        aboutText.classList.remove("hidden");
-      });
-
-      lightBtn.addEventListener("click", () => {
-        document.body.setAttribute("data-theme", "light");
-        document.querySelector("iframe").contentWindow.postMessage({
-          type: "THEME_CHANGE",
-          theme: "light"
-        }, "*");
-      });
-
-      darkBtn.addEventListener("click", () => {
-        document.body.setAttribute("data-theme", "dark");
-        document.querySelector("iframe").contentWindow.postMessage({
-          type: "THEME_CHANGE",
-          theme: "dark"
-        }, "*");
-      });
-
-
-      projectsBtn.addEventListener("click", () => {
-        const showScroller = !scroller.classList.contains("show");
-        scroller.classList.toggle("show", showScroller);
-        aboutText.classList.toggle("hidden", showScroller);
-        togglePanel(false, false);
-      });
-
-      const titles = document.querySelectorAll(".scroller-content div[style*='font-family: \\'SpaceMono\\''][style*='font-size: calc(var(--i) * 2)'][style*='line-height: 1.05']");
-
-      titles.forEach((titleDiv) => {
-        titleDiv.classList.add("project-title");
-        titleDiv.style.cursor = "pointer";
-        titleDiv.addEventListener("click", () => {
-          const projectId = projectMap[titleDiv.textContent.trim()];
-          const panel = document.getElementById(projectId);
-          if (panel && panel.classList.contains("show")) {
-            panel.classList.remove("show");
-          } else {
-            allProjectPanels.forEach(p => p.classList.remove("show"));
-            if (panel) panel.classList.add("show");
-          }
-        });
-      });
-
-      // Custom cursor animation
-      const circleElement = document.querySelector('.circle');
-      const mouse = { x: 0, y: 0 };
-      const previousMouse = { x: 0, y: 0 };
-      const circle = { x: 0, y: 0 };
-      let currentScale = 0;
-      let currentAngle = 0;
-      const speed = 0.17;
-
-      window.addEventListener('mousemove', (e) => {
-        mouse.x = e.x;
-        mouse.y = e.y;
-      });
-
-      const tick = () => {
-        circle.x += (mouse.x - circle.x) * speed;
-        circle.y += (mouse.y - circle.y) * speed;
-        const translate = `translate(${circle.x}px, ${circle.y}px)`;
-
-        const deltaX = mouse.x - previousMouse.x;
-        const deltaY = mouse.y - previousMouse.y;
-        previousMouse.x = mouse.x;
-        previousMouse.y = mouse.y;
-        const velocity = Math.min(Math.sqrt(deltaX ** 2 + deltaY ** 2) * 4, 150);
-        const scaleValue = (velocity / 150) * 0.7;
-        currentScale += (scaleValue - currentScale) * speed;
-        const scale = `scale(${1 + currentScale}, ${1 - currentScale})`;
-
-        const angle = Math.atan2(deltaY, deltaX) * 180 / Math.PI;
-        if (velocity > 20) currentAngle = angle;
-        const rotate = `rotate(${currentAngle}deg)`;
-
-        circleElement.style.transform = `${translate} ${rotate} ${scale}`;
-        requestAnimationFrame(tick);
-      }
-
-      tick();
-
-      // Adjust the top/bottom masks to match the positions of the top/bottom lines
-      function updateMasks() {
-        const topLine = document.querySelector('.top-line');
-        const bottomLine = document.querySelector('.bottom-line');
-        const topMask = document.querySelector('.mask.top');
-        const bottomMask = document.querySelector('.mask.bottom');
-        if (!topLine || !bottomLine || !topMask || !bottomMask) return;
-
-        const h = window.innerHeight || document.documentElement.clientHeight;
-        const topRect = topLine.getBoundingClientRect();
-        const bottomRect = bottomLine.getBoundingClientRect();
-
-        // Percentage of viewport above the top line
-        let topPercent = (topRect.top / h) * 100;
-        // Percentage of viewport below the bottom line (from bottom line's top to viewport bottom)
-        let bottomPercent = ((h - bottomRect.top) / h) * 100;
-
-        topPercent = Math.max(0, Math.min(100, topPercent));
-        bottomPercent = Math.max(0, Math.min(100, bottomPercent));
-
-        // Apply as vh so it scales with viewport height
-        topMask.style.height = topPercent + 'vh';
-        bottomMask.style.height = bottomPercent + 'vh';
-      }
-
-      // Run once on load and when the viewport changes
-      updateMasks();
-      window.addEventListener('resize', updateMasks);
-    });
-  </script>
-  <script>
-    (function(){
-      function postTheme(theme){
-        localStorage.setItem('theme', theme);
-        var iframe = document.querySelector('iframe');
-        try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'theme', theme: theme }, '*'); } catch(e){}
-      }
-
-      document.addEventListener('DOMContentLoaded', function(){
-        // ensure localStorage has initial theme matching body
-        var initial = document.body.getAttribute('data-theme') || 'light';
-        localStorage.setItem('theme', initial);
-        var iframe = document.querySelector('iframe');
-        try { if (iframe && iframe.contentWindow) iframe.contentWindow.postMessage({ type: 'theme', theme: initial }, '*'); } catch(e){}
-
-        var light = document.querySelector('.light-mode');
-        var dark = document.querySelector('.dark-mode');
-
-        if (light) light.addEventListener('click', function(){
-          document.body.setAttribute('data-theme', 'light');
-          postTheme('light');
-        });
-        if (dark) dark.addEventListener('click', function(){
-          document.body.setAttribute('data-theme', 'dark');
-          postTheme('dark');
-        });
-      });
-    })();
-  </script>
+  <script src="main.js"></script>
 </body>
 </html>
