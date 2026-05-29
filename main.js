@@ -151,35 +151,31 @@
      Top-bar buttons: About / Contact / Projects / Light / Dark / Title
      ------------------------------------------------------------------------ */
   function wireUpButtons() {
-    const aboutBtn    = $(".about-me");
     const contactBtn  = $(".contact-me");
     const siteTitle   = $(".site-title");
     const lightBtn    = $(".light-mode");
     const darkBtn     = $(".dark-mode");
     const projectsBtn = $(".projects-button");
-    const aboutPanel  = $("#aboutPanel");
     const contactPanel = $("#contactPanel");
     const scroller    = $(".scroller-container");
     const aboutText   = $(".about-text");
 
     const allProjectPanels = $$(".project-panel");
 
-    function togglePanel(showAbout, showContact) {
-      aboutPanel.classList.toggle("show", showAbout);
-      contactPanel.classList.toggle("show", showContact);
+    // Close the contact panel and every project panel.
+    function closePanels() {
+      contactPanel.classList.remove("show");
       allProjectPanels.forEach((panel) => panel.classList.remove("show"));
     }
 
-    aboutBtn.addEventListener("click", () => {
-      togglePanel(!aboutPanel.classList.contains("show"), false);
-    });
-
     contactBtn.addEventListener("click", () => {
-      togglePanel(false, !contactPanel.classList.contains("show"));
+      const show = !contactPanel.classList.contains("show");
+      closePanels();
+      contactPanel.classList.toggle("show", show);
     });
 
     siteTitle.addEventListener("click", () => {
-      togglePanel(false, false);
+      closePanels();
       scroller.classList.remove("show");
       aboutText.classList.remove("hidden");
     });
@@ -188,7 +184,7 @@
       const showScroller = !scroller.classList.contains("show");
       scroller.classList.toggle("show", showScroller);
       aboutText.classList.toggle("hidden", showScroller);
-      togglePanel(false, false);
+      closePanels();
     });
 
     /* Single theme handler — applies the theme locally, persists it, and

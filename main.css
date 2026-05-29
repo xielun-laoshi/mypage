@@ -128,7 +128,6 @@ body {
    -------------------------------------------------------------------------- */
 
 .site-title,
-.about-me,
 .contact-me,
 .light-mode,
 .dark-mode,
@@ -139,7 +138,6 @@ body {
 }
 
 .site-title:hover,
-.about-me:hover,
 .contact-me:hover,
 .light-mode:hover,
 .dark-mode:hover,
@@ -211,7 +209,6 @@ body {
   cursor: pointer;
 }
 
-.about-me,
 .contact-me,
 .light-mode,
 .dark-mode,
@@ -223,9 +220,8 @@ body {
   cursor: pointer;
 }
 
-.about-me      { top: 11.3vh; right: 1.5vw;  }
-.contact-me    { top: 11.3vh; right: 5.5vw;  }
-.projects-button { top: 11.3vh; right: 10.4vw; }
+.contact-me    { top: 11.3vh; right: 1.5vw;  }
+.projects-button { top: 11.3vh; right: 6.4vw; }
 .light-mode    { bottom: 11.3vh; right: 1.5vw; }
 .dark-mode     { bottom: 11.3vh; right: 5vw;   }
 
@@ -236,6 +232,8 @@ body {
   position: fixed;
   bottom: calc(15vh + 3vh);
   left: 2vw;
+  max-width: min(30vw, 20rem);
+  line-height: 1.4;
   color: var(--text-color);
   z-index: 10;
   user-select: none;
@@ -397,7 +395,6 @@ a {
    -------------------------------------------------------------------------- */
 
 @media (max-width: 950px) {
-  .about-me,
   .contact-me,
   .light-mode,
   .dark-mode,
@@ -407,9 +404,10 @@ a {
     transform: none;
   }
 
-  .about-me      { top: 5.5vh; }
-  .contact-me    { top: 8.5vh; }
-  .projects-button { top: 11.5vh; }
+  .contact-me    { top: 5.5vh; }
+  .projects-button { top: 8.5vh; }
   .light-mode    { bottom: 12vh; }
   .dark-mode     { bottom: 9vh;  }
+
+  .about-text { max-width: 86vw; }
 }
