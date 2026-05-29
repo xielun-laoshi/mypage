@@ -264,8 +264,8 @@ body {
   left: 0;
 }
 
-.top-line    { top: 15vh;    right: 0; }
-.bottom-line { bottom: 15vh; right: 0; }
+.top-line    { top: 15vh;    top: 15dvh;    right: 0; }
+.bottom-line { bottom: 15vh; bottom: 15dvh; right: 0; }
 
 /* --------------------------------------------------------------------------
    Scroller (project list)
@@ -275,9 +275,11 @@ body {
   position: fixed;
   align-items: center;
   top: 15vh;
+  top: 15dvh;
+  bottom: 15vh;
+  bottom: 15dvh;
   left: 1.1vw;
   width: 70%;
-  height: 70vh;
   overflow-y: auto;
   padding: 20px;
   background: transparent;
