@@ -36,6 +36,19 @@
     }
   }
 
+  /** Fire `fn` on click, or on Enter/Space for role="button" elements, so the
+      focusable labels are operable by keyboard and not just the mouse. */
+  function onActivate(el, fn) {
+    if (!el) return;
+    el.addEventListener("click", fn);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+        e.preventDefault();
+        fn(e);
+      }
+    });
+  }
+
   /* ------------------------------------------------------------------------
      Main entry
      ------------------------------------------------------------------------ */
@@ -148,7 +161,7 @@
   }
 
   /* ------------------------------------------------------------------------
-     Top-bar buttons: About / Contact / Projects / Light / Dark / Title
+     Top-bar buttons: Contact / Projects / Light / Dark / Title
      ------------------------------------------------------------------------ */
   function wireUpButtons() {
     const contactBtn  = $(".contact-me");
@@ -168,19 +181,19 @@
       allProjectPanels.forEach((panel) => panel.classList.remove("show"));
     }
 
-    contactBtn.addEventListener("click", () => {
+    onActivate(contactBtn, () => {
       const show = !contactPanel.classList.contains("show");
       closePanels();
       contactPanel.classList.toggle("show", show);
     });
 
-    siteTitle.addEventListener("click", () => {
+    onActivate(siteTitle, () => {
       closePanels();
       scroller.classList.remove("show");
       aboutText.classList.remove("hidden");
     });
 
-    projectsBtn.addEventListener("click", () => {
+    onActivate(projectsBtn, () => {
       const showScroller = !scroller.classList.contains("show");
       scroller.classList.toggle("show", showScroller);
       aboutText.classList.toggle("hidden", showScroller);
@@ -195,8 +208,8 @@
       postToIframe({ type: "theme", theme });
     }
 
-    lightBtn.addEventListener("click", () => setTheme("light"));
-    darkBtn.addEventListener("click", () => setTheme("dark"));
+    onActivate(lightBtn, () => setTheme("light"));
+    onActivate(darkBtn, () => setTheme("dark"));
 
     // Push the *current* theme to the iframe once it has loaded. The
     // localStorage seed in <head> handles cold-start; this re-sends in case
@@ -244,8 +257,8 @@
     const speed = 0.17;
 
     window.addEventListener("mousemove", (e) => {
-      mouse.x = e.x;
-      mouse.y = e.y;
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
     });
 
     const tick = () => {

@@ -71,7 +71,6 @@ class Scene {
       uniforms: {
         time:       { value: 1.0 },
         texture:    { value: this.textureLoader.load("https://s3-us-west-2.amazonaws.com/s.cdpn.io/1081752/spark1.png") },
-        resolution: { value: new THREE.Vector2() },
         uColor:     { value: initColor },
       },
       vertexShader:   document.getElementById("render-vs").textContent,
