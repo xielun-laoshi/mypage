@@ -227,7 +227,7 @@ body {
 
 .about-text {
   font-family: "SpaceMonoBold", monospace;
-  font-size: calc(var(--index) * 0.65);
+  font-size: clamp(0.62rem, calc(var(--index) * 0.65), 0.95rem);
   font-weight: 1000;
   position: fixed;
   bottom: calc(15vh + 3vh);
@@ -363,17 +363,29 @@ body {
   opacity: 0;
   transform: translateX(30%);
   transition: opacity 0.6s ease 0.25s, transform 0.6s ease 0.25s, color 0.4s ease;
-  font-size: clamp(0.9rem, calc(var(--i) * 0.65), 1.25rem);
+  font-size: clamp(0.72rem, calc(var(--i) * 0.65), 1.1rem);
   line-height: 1.25;
   word-spacing: 0.05em;
   letter-spacing: 0.05em;
   font-weight: bold;
   color: var(--text-color);
+  /* Keep long panel text within the band between the top and bottom lines:
+     the box ends exactly on the bottom line (85dvh) and overflow scrolls
+     instead of bleeding past it. The 17vh matches the panel's padding-top,
+     so it cancels and the bottom edge tracks the dvh line on mobile. */
+  max-height: calc(85dvh - 17vh);
+  overflow-y: auto;
+  padding-bottom: 2vh;
+  scrollbar-width: none;
+}
+
+.about-content::-webkit-scrollbar {
+  display: none;
 }
 
 .about-content h2 {
   font-family: "SpaceMonoBold", monospace;
-  font-size: clamp(1rem, calc(var(--i) * 0.7), 1.4rem);
+  font-size: clamp(0.82rem, calc(var(--i) * 0.72), 1.2rem);
   font-weight: bold;
   margin-bottom: 1rem;
   letter-spacing: 0em;
@@ -404,10 +416,14 @@ a {
     transform: none;
   }
 
-  .contact-me    { top: 5.5vh; }
-  .projects-button { top: 8.5vh; }
+  .projects-button { top: 8vh;    top: 8dvh;    }
+  .contact-me      { top: 11.5vh; top: 11.5dvh; }
   .light-mode    { bottom: 12vh; }
   .dark-mode     { bottom: 9vh;  }
 
-  .about-text { max-width: 86vw; }
+  .about-text {
+    max-width: min(86vw, 18rem);
+    font-size: clamp(0.55rem, calc(var(--index) * 0.5), 0.8rem);
+    line-height: 1.3;
+  }
 }
