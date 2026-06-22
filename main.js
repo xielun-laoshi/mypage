@@ -10,13 +10,13 @@
      project-id lookup used when opening detail panels.
      ------------------------------------------------------------------------ */
   const PROJECTS = [
-    { id: "project-ANN",        title: "Research on ANN Filtered Vector Search",        meta: "ML / DS - Affiliated with MITCSAIL - 2025" },
-    { id: "project-Readability", title: "Text Readability Prediction via Advanced NLP",  meta: "ML / DS - Affiliated with BreakThroughTech AI - 2025" },
+    { id: "project-ANN",        title: "Research on ANN Filtered Vector Search",        meta: "Machine Learning Research - Affiliated with MITCSAIL - 2025" },
+    { id: "project-Readability", title: "Text Readability Prediction via Advanced NLP",  meta: "Modeling - Affiliated with BreakThroughTech AI - 2025" },
     { id: "project-Hackathon",   title: "Wellesley College Hackathon Official Site",     meta: "Frontend - 2025" },
-    { id: "project-ADHD",        title: "ADHD Diagnosis for Women",                      meta: 'ML / DS - Kaggle "Women in Data Science" Hackathon Top 10% Students - 2025' },
+    { id: "project-ADHD",        title: "ADHD Diagnosis for Women",                      meta: 'Modeling - Kaggle "Women in Data Science" Hackathon - 2025' },
     { id: "project-EcoBear",     title: "EcoBear, a Web Widget",                         meta: "Frontend - Wellesley College Designathon Winning - 2024" },
-    { id: "project-Hog",         title: "China's Hog Futures Research",                  meta: "Paper - ICEMGD 7th - 2023" },
-    { id: "project-EV",          title: "Subsidy Impact on China's EV Uptake",           meta: "Paper - S.-T. Yau Science Award Nominated - 2022" },
+    { id: "project-Hog",         title: "China's Hog Futures Research",                  meta: "Independent Research - ICEMGD 7th - 2023" },
+    { id: "project-EV",          title: "Subsidy Impact on China's EV Uptake",           meta: "Independent Research - S.-T. Yau Science Award - 2022" },
   ];
 
   /* ------------------------------------------------------------------------
