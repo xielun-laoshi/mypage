@@ -1,17 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>GLSL Particle Wave | Three.js</title>
   <link rel="stylesheet" href="./style.css">
-
 </head>
 <body>
-<!-- partial:index.partial.html -->
 <div class="container"></div>
 
-
-<!-- Render shaders -->
+<!-- Vertex shader: displaces a flat plane of points with Perlin noise -->
 <script id="render-vs" type="x-shader/x-vertex">
 vec4 mod289(vec4 x)
 {
@@ -76,22 +73,19 @@ float map(float value, float oldMin, float oldMax, float newMin, float newMax) {
     return newMin + (newMax - newMin) * (value - oldMin) / (oldMax - oldMin);
 }
 
-varying vec3 vUv;
-varying float vTime;
 varying float vZ;
 uniform float time;
 void main()
 {
-    vUv = position;
-    vTime = time;
     vec3 newPos = position;
+    // Two noise fields: one shapes a peak toward the plane's center,
+    // the other modulates it over time — their product is the wave height.
     vec2 peak = vec2(1.0 - abs(.5 - uv.x), 1.0 - abs(.5 - uv.y));
     vec2 noise = vec2(
     	map(cnoise(vec2(0.3 * time + uv.x * 5., uv.y * 5.)), 0., 1., -2., (peak.x * peak.y * 30.)),
     	map(cnoise(vec2(-0.3 * time + uv.x * 5., uv.y * 5.)), 0., 1., -2., 25.)
     );
 
-    //newPos.x += noise.x * 10.;
     newPos.z += noise.x * .06 * noise.y;
     vZ = newPos.z;
     vec4 mvPosition = modelViewMatrix * vec4( newPos, 1.0 );
@@ -100,9 +94,8 @@ void main()
 }
 </script>
 
+<!-- Fragment shader: theme color, alpha fades with the point's height -->
 <script id="render-fs" type="x-shader/x-fragment">
-varying vec3 vUv;
-varying float vTime;
 varying float vZ;
 uniform sampler2D texture;
 uniform vec3 uColor;
@@ -111,21 +104,14 @@ float map(float value, float oldMin, float oldMax, float newMin, float newMax) {
     return newMin + (newMax - newMin) * (value - oldMin) / (oldMax - oldMin);
 }
 
-
 void main()
 {
-	vec3 colorA = vec3(.6, 0.17, 0.17);
-    vec3 colorB = vec3(0.17, 0.8, .6); 
-    //vec3 color = mix(colorA, colorB, vUv.x * vUv.y);
-    float alpha = map(vZ / 2., -1. / 2., 30. / 2., 0.17, 1.); 
-    vec3 color = uColor;
-
-    gl_FragColor = vec4(color, alpha);
-    gl_FragColor = gl_FragColor * texture2D( texture, gl_PointCoord );
+    float alpha = map(vZ / 2., -1. / 2., 30. / 2., 0.17, 1.);
+    gl_FragColor = vec4(uColor, alpha) * texture2D( texture, gl_PointCoord );
 }
 </script>
-<!-- partial -->
-  <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/86/three.min.js'></script><script  src="./script.js"></script>
 
+<script src="three.min.js"></script>
+<script src="./script.js"></script>
 </body>
 </html>
