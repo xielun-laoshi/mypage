@@ -25,10 +25,21 @@
   </div>
 
   <div class="site-title" role="button" tabindex="0">Sheron Yang</div>
-  <div class="contact-me" role="button" tabindex="0">Contact</div>
-  <div class="light-mode" role="button" tabindex="0">Light</div>
-  <div class="dark-mode" role="button" tabindex="0">Dark</div>
-  <div class="projects-button" role="button" tabindex="0">Projects</div>
+
+  <!-- Top-right controls: a row sitting just above the top line.
+       DOM order is left-to-right (Projects, Contact); on narrow screens it
+       stacks into a column (Projects over Contact) via the media query. -->
+  <div class="controls controls-top">
+    <div class="projects-button" role="button" tabindex="0">Projects</div>
+    <div class="contact-me" role="button" tabindex="0">Contact</div>
+  </div>
+
+  <!-- Bottom-right controls: a row sitting just below the bottom line.
+       Column-reverse on narrow screens keeps Light above Dark. -->
+  <div class="controls controls-bottom">
+    <div class="dark-mode" role="button" tabindex="0">Dark</div>
+    <div class="light-mode" role="button" tabindex="0">Light</div>
+  </div>
 
   <div class="about-text">Math & CS undergrad exploring at the intersection of ML, agents, and quant finance. Always looking for unsolved problems and top-tier people to build with.</div>
 

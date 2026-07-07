@@ -55,7 +55,8 @@
   document.addEventListener("DOMContentLoaded", () => {
     setupLoader();
     renderProjects();
-    wireUpButtons();
+    const refreshScrollerBounds = setupScrollerBounds();
+    wireUpButtons(refreshScrollerBounds);
     wireUpProjectTitles();
     startCursor();
   });
@@ -163,7 +164,7 @@
   /* ------------------------------------------------------------------------
      Top-bar buttons: Contact / Projects / Light / Dark / Title
      ------------------------------------------------------------------------ */
-  function wireUpButtons() {
+  function wireUpButtons(refreshScrollerBounds) {
     const contactBtn  = $(".contact-me");
     const siteTitle   = $(".site-title");
     const lightBtn    = $(".light-mode");
@@ -198,6 +199,9 @@
       scroller.classList.toggle("show", showScroller);
       aboutText.classList.toggle("hidden", showScroller);
       closePanels();
+      // Recompute row opacities on open: scroll position or window size may
+      // have changed while the list was hidden.
+      if (showScroller && refreshScrollerBounds) requestAnimationFrame(refreshScrollerBounds);
     });
 
     /* Single theme handler — applies the theme locally, persists it, and
@@ -239,6 +243,49 @@
         }
       });
     });
+  }
+
+  /* ------------------------------------------------------------------------
+     Scroller boundary opacity — a project row is fully opaque only while its
+     center sits between the top and bottom lines. The moment that center
+     crosses a line the row snaps to a low opacity (no transition), so rows
+     stay visible past the borders instead of being clipped or fading. Done
+     here, not in CSS, because it depends on each row's live scroll position.
+     ------------------------------------------------------------------------ */
+  function setupScrollerBounds() {
+    const scroller   = $(".scroller-container");
+    const content    = $(".scroller-content");
+    const topLine    = $(".top-line");
+    const bottomLine = $(".bottom-line");
+    if (!scroller || !content || !topLine || !bottomLine) return () => {};
+
+    const OUT_OF_BAND_OPACITY = "0.15"; // set to "0" to hide rows entirely
+
+    function update() {
+      const topY    = topLine.getBoundingClientRect().top;
+      const bottomY = bottomLine.getBoundingClientRect().top;
+      for (const row of content.children) {
+        const rect = row.getBoundingClientRect();
+        const center = rect.top + rect.height / 2;
+        const inside = center >= topY && center <= bottomY;
+        // Inside: clear the inline value so CSS (base opacity + :hover) wins.
+        // Outside: pin the low opacity, overriding hover. Abrupt, never faded.
+        const desired = inside ? "" : OUT_OF_BAND_OPACITY;
+        if (row.style.opacity !== desired) row.style.opacity = desired;
+      }
+    }
+
+    // Throttle scroll/resize to one layout read per frame.
+    let ticking = false;
+    function schedule() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { ticking = false; update(); });
+    }
+
+    scroller.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return update;
   }
 
   /* ------------------------------------------------------------------------

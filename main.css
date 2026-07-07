@@ -82,12 +82,29 @@
 :root {
   --index: calc(2.8vh);
   --i: calc(1vw + 1vh);
+
+  /* Layout anchors. The horizontal rules sit --line-inset from the top and
+     bottom edges; the control rows anchor to the SAME value, so the gap
+     between a row and its line is constant at every viewport size. The gaps
+     below are text- or height-relative (never raw vw), so spacing stays
+     balanced as the window's aspect ratio changes. */
+  --line-inset: 15vh;
+  --line-gap: clamp(0.6rem, 1.5vh, 1.4rem);  /* control row  -> its line       */
+  --edge-gap: clamp(1.1rem, 1.6vw, 2rem);    /* right button -> page edge      */
+  --btn-gap: 0.75em;                         /* button       -> button in a row */
+
   --bg-color: #d1d1d1;
   --text-color: #1a1a1a;
   --line-color: #1a1a1a;
   --panel-border: #1a1a1a;
   --cursor-border: #1a1a1a;
   --canvas-bg: #d1d1d1;
+}
+
+/* Prefer the dynamic viewport height where supported so the lines (and the
+   rows anchored to them) track mobile browser chrome showing/hiding. */
+@supports (height: 100dvh) {
+  :root { --line-inset: 15dvh; }
 }
 
 [data-theme="dark"] {
@@ -146,7 +163,7 @@ body {
 .projects-button:hover,
 .project-title:hover,
 .hover-link:hover {
-  opacity: 0.25;
+  opacity: 0.5; /* dim on hover, but less transparent than the old 0.25 */
   transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out, color 0.3s ease-in-out;
 }
 
@@ -211,21 +228,28 @@ body {
   cursor: pointer;
 }
 
-.contact-me,
-.light-mode,
-.dark-mode,
-.projects-button {
+.controls {
+  position: fixed;
+  right: var(--edge-gap);
+  display: flex;
+  align-items: baseline;
+  gap: var(--btn-gap);
   font-family: "SpaceMonoBold", monospace;
   font-size: calc(var(--index) * 0.65);
   font-weight: 1000;
-  position: fixed;
+  z-index: 10;
+}
+
+.controls > div {
   cursor: pointer;
 }
 
-.contact-me    { top: 11.3vh; right: 1.5vw;  }
-.projects-button { top: 11.3vh; right: 6.4vw; }
-.light-mode    { bottom: 11.3vh; right: 1.5vw; }
-.dark-mode     { bottom: 11.3vh; right: 5vw;   }
+/* Row's bottom edge sits --line-gap above the top line. (100% - --line-inset
+   is the line's distance from the viewport bottom.) */
+.controls-top    { bottom: calc(100% - var(--line-inset) + var(--line-gap)); }
+
+/* Row's top edge sits --line-gap below the bottom line. */
+.controls-bottom { top:    calc(100% - var(--line-inset) + var(--line-gap)); }
 
 .about-text {
   font-family: "SpaceMonoBold", monospace;
@@ -264,8 +288,8 @@ body {
   left: 0;
 }
 
-.top-line    { top: 15vh;    top: 15dvh;    right: 0; }
-.bottom-line { bottom: 15vh; bottom: 15dvh; right: 0; }
+.top-line    { top: var(--line-inset);    right: 0; }
+.bottom-line { bottom: var(--line-inset); right: 0; }
 
 /* --------------------------------------------------------------------------
    Scroller (project list)
@@ -274,10 +298,8 @@ body {
 .scroller-container {
   position: fixed;
   align-items: center;
-  top: 15vh;
-  top: 15dvh;
-  bottom: 15vh;
-  bottom: 15dvh;
+  top: 0;
+  bottom: 0;
   left: 1.1vw;
   width: 70%;
   overflow-y: auto;
@@ -322,7 +344,7 @@ body {
 
 .scroller-content .project-meta {
   font-family: "SpaceMonoBold", monospace;
-  font-size: calc(var(--i) * 0.6);
+  font-size: max(0.6rem, calc(var(--i) * 0.6));
   font-weight: 900;
   line-height: 1.25;
   margin-top: -1.5em;
@@ -333,6 +355,7 @@ body {
   font-size: calc(var(--i) * 0.6);
   font-weight: 900;
   line-height: 1.25;
+  margin-bottom: 22px;
 }
 
 /* --------------------------------------------------------------------------
@@ -409,19 +432,15 @@ a {
    -------------------------------------------------------------------------- */
 
 @media (max-width: 950px) {
-  .contact-me,
-  .light-mode,
-  .dark-mode,
-  .projects-button {
-    right: 1.2vw;
+  /* Narrow screens: stack each row into a right-aligned column in its corner.
+     The rows keep their line/edge anchoring and gaps; only the axis changes.
+     column-reverse on the bottom row keeps Light above Dark (DOM: Dark, Light). */
+  .controls {
     font-size: calc(var(--index) * 0.6);
-    transform: none;
+    align-items: flex-end;
   }
-
-  .projects-button { top: 8vh;    top: 8dvh;    }
-  .contact-me      { top: 11.5vh; top: 11.5dvh; }
-  .light-mode    { bottom: 12vh; }
-  .dark-mode     { bottom: 9vh;  }
+  .controls-top    { flex-direction: column; }
+  .controls-bottom { flex-direction: column-reverse; }
 
   .about-text {
     max-width: min(86vw, 18rem);

@@ -1,11 +1,31 @@
-body, .container, canvas {
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 70%;
+/* This document is embedded as a full-bleed iframe in index.html.
+   The scene canvas is sized to fill the viewport exactly, so this document
+   must never scroll. The rules below make that structural rather than masked:
+   the host is pinned to the viewport and the canvas display size is CSS-driven,
+   so it cannot grow the document on resize. */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden; /* sub-pixel backstop only; nothing actually overflows */
 }
 
+/* Pin the scene host to the iframe viewport (scrollbars excluded), taken out
+   of flow so it can never add scrollable overflow to the document. */
+.container {
+  position: fixed;
+  inset: 0;
+}
+
+/* Display size follows the fixed container via CSS, so the canvas can never
+   exceed the viewport on resize. script.js updates only the drawing-buffer
+   resolution and camera aspect (setSize(w, h, false)), not this size. */
 canvas {
-    display: block;
-    background: var(--canvas-bg);
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--canvas-bg);
 }

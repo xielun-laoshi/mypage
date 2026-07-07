@@ -34,13 +34,12 @@ class Scene {
 
     this.renderer = new THREE.WebGLRenderer({ alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.$el.appendChild(this.renderer.domElement);
 
     this.createParticles();
 
     window.addEventListener("resize", this.resize);
-    this.resize();
+    this.resize(); // sizes the renderer + camera from the container
     this.render();
   }
 
@@ -82,9 +81,17 @@ class Scene {
   }
 
   resize() {
-    const w = window.innerWidth;
-    const h = window.innerHeight;
-    this.renderer.setSize(w, h);
+    // Measure the container's client box, not window.innerWidth/Height. The
+    // inner* values include scrollbar area, so using them can feed back: a
+    // transient scrollbar shrinks them, that resizes the canvas, and the
+    // scrollbar sticks. clientWidth/Height exclude scrollbars and are integers,
+    // which breaks the loop.
+    const w = this.$el.clientWidth || 1;
+    const h = this.$el.clientHeight || 1;
+    // updateStyle = false: the canvas display size is fixed at 100% by CSS, so
+    // we only refresh the drawing buffer and camera aspect. The canvas can
+    // therefore never overflow the viewport.
+    this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
   }
