@@ -142,6 +142,46 @@ body {
   z-index: 9999;
 }
 
+/* Theme-inversion lens: the cursor interior re-renders whatever is beneath it
+   (text, lines, panels, the WebGL wave in the iframe) in the OPPOSITE theme.
+   backdrop-filter recolors the already-composited pixels under the element,
+   clipped to the border-radius, so the existing rAF transform that moves the
+   cursor drives the lens with zero extra JS and no added latency.
+
+   The chains are anchored palette maps, not a naive invert:
+   invert(1) brightness(k) contrast(c) computes y = c*k*(1-x) + (0.5 - 0.5c);
+   k and c are solved so the background maps EXACTLY onto the opposite
+   theme's background (keeps the lens seamless over flat areas) while the
+   foreground/background separation is widened 1.15x for extra punch —
+   text renders inkier than a faithful swap and the wave particles land on
+   pure white/black (verified within 1-2/255 by canvas pixel sampling).
+
+   Values are spelled out per theme instead of a shared var() because Safari
+   drops backdrop-filter values that reference CSS variables
+   (webkit.org/b/297620). Browsers without backdrop-filter skip this block
+   and keep the plain outlined-circle cursor. */
+@supports (backdrop-filter: invert(1)) or (-webkit-backdrop-filter: invert(1)) {
+  .circle {
+    /* light page -> dark-theme lens */
+    -webkit-backdrop-filter: invert(1) brightness(0.8950) contrast(1.2568);
+    backdrop-filter: invert(1) brightness(0.8950) contrast(1.2568);
+    /* the inversion seam defines the lens edge; no drawn ring (transparent
+       rather than none, so the 40px border-box geometry is unchanged) */
+    border-color: transparent;
+    /* No transition on backdrop-filter: Chromium doesn't interpolate it here
+       (tested — values jump regardless), so declaring one only invites
+       engine-specific weirdness. The lens re-maps instantly on theme flip
+       while the page itself crossfades. Nothing else may be transitioned:
+       transform especially must keep tracking the cursor raw. */
+  }
+
+  [data-theme="dark"] .circle {
+    /* dark page -> light-theme lens */
+    -webkit-backdrop-filter: invert(1) brightness(0.7649) contrast(1.6);
+    backdrop-filter: invert(1) brightness(0.7649) contrast(1.6);
+  }
+}
+
 /* --------------------------------------------------------------------------
    Top-level interactive labels
    -------------------------------------------------------------------------- */
