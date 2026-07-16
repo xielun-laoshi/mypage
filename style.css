@@ -22,10 +22,11 @@ body {
 
 /* Display size follows the fixed container via CSS, so the canvas can never
    exceed the viewport on resize. script.js updates only the drawing-buffer
-   resolution and camera aspect (setSize(w, h, false)), not this size. */
+   resolution and camera aspect (setSize(w, h, false)), not this size.
+   No background: the WebGL context is alpha:true, so the canvas stays
+   transparent and the parent page's themed background shows through. */
 canvas {
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--canvas-bg);
 }

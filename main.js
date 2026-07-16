@@ -10,13 +10,14 @@
      project-id lookup used when opening detail panels.
      ------------------------------------------------------------------------ */
   const PROJECTS = [
-    { id: "project-ANN",        title: "Research on ANN Filtered Vector Search",        meta: "Machine Learning Research - Affiliated with MITCSAIL - 2025" },
-    { id: "project-Readability", title: "Text Readability Prediction via Advanced NLP",  meta: "Modeling - Affiliated with BreakThroughTech AI - 2025" },
-    { id: "project-Hackathon",   title: "Wellesley College Hackathon Official Site",     meta: "Frontend - 2025" },
-    { id: "project-ADHD",        title: "ADHD Diagnosis for Women",                      meta: 'Modeling - Kaggle "Women in Data Science" Hackathon - 2025' },
-    { id: "project-EcoBear",     title: "EcoBear, a Web Widget",                         meta: "Frontend - Wellesley College Designathon Winning - 2024" },
-    { id: "project-Hog",         title: "China's Hog Futures Research",                  meta: "Independent Research - ICEMGD 7th - 2023" },
-    { id: "project-EV",          title: "Subsidy Impact on China's EV Uptake",           meta: "Independent Research - S.-T. Yau Science Award - 2022" },
+    { id: "project-AMRA",        title: "Adaptive Momentum–Reversal Allocation",  meta: "Quantitative Research - Independent - Present" },
+    { id: "project-Readability", title: "NLP for Readability Assessment",         meta: "Modeling - Affiliated with BreakThroughTech AI - Present" },
+    { id: "project-ANN",         title: "Research on ANN Filtered Vector Search", meta: "Machine Learning Research - Affiliated with MITCSAIL - 2025" },
+    { id: "project-Hackathon",   title: "Wellesley College Hackathon Official Site", meta: "Frontend - 2025" },
+    { id: "project-ADHD",        title: "ADHD Diagnosis for Women",               meta: 'Modeling - Kaggle "Women in Data Science" Hackathon - 2025' },
+    { id: "project-EcoBear",     title: "EcoBear, a Web Widget",                  meta: "Frontend - Wellesley College Designathon Winning - 2024" },
+    { id: "project-Hog",         title: "China's Hog Futures Research",           meta: "Independent Research - ICEMGD 7th - 2023" },
+    { id: "project-EV",          title: "Subsidy Impact on China's EV Uptake",    meta: "Independent Research - S.-T. Yau Science Award - 2022" },
   ];
 
   /* ------------------------------------------------------------------------
@@ -42,7 +43,7 @@
     if (!el) return;
     el.addEventListener("click", fn);
     el.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " " || e.key === "Spacebar") {
+      if (e.key === "Enter" || e.key === " ") {
         e.preventDefault();
         fn(e);
       }
@@ -56,8 +57,7 @@
     setupLoader();
     renderProjects();
     const refreshScrollerBounds = setupScrollerBounds();
-    wireUpButtons(refreshScrollerBounds);
-    wireUpProjectTitles();
+    setupInteractions(refreshScrollerBounds);
     startCursor();
   });
 
@@ -70,15 +70,10 @@
     const loader = document.getElementById("loader");
     if (!loader) return;
 
-    const MIN_LOADER_DURATION = 3000; // 3 seconds — keeps the animation visible
-    const HARD_FALLBACK       = 8000; // 8 seconds — guarantees we never hang
+    const MIN_LOADER_DURATION = 3000; // keeps the loader animation visible
+    const HARD_FALLBACK       = 8000; // guarantees we never hang
 
-    const state = {
-      fonts:    false,
-      threejs:  false,
-      iframe:   false,
-      minDelay: false,
-    };
+    const state = { fonts: false, threejs: false, iframe: false, minDelay: false };
 
     let hidden = false;
     const hide = () => {
@@ -118,28 +113,21 @@
       }
     });
 
-    // Minimum visible duration
     setTimeout(() => { state.minDelay = true; maybeHide(); }, MIN_LOADER_DURATION);
-
-    // Hard fallback — hide no matter what
     setTimeout(hide, HARD_FALLBACK);
   }
 
   /* ------------------------------------------------------------------------
      Render the project list into .scroller-content from the PROJECTS array.
-     Each project becomes: title, meta, and (except the last) a gap.
+     Each project is a title div + meta div; all list spacing is CSS
+     (.scroller-content padding-top and the .project-meta + .project-title
+     margin), so no spacer elements are needed.
      ------------------------------------------------------------------------ */
   function renderProjects() {
     const root = $(".scroller-content");
     if (!root) return;
 
-    // Top spacer (was: <div style="font-size: calc(var(--index) * 2); ..."><br></div>)
-    const spacer = document.createElement("div");
-    spacer.className = "scroller-spacer";
-    spacer.innerHTML = "<br>";
-    root.appendChild(spacer);
-
-    PROJECTS.forEach((project, idx) => {
+    for (const project of PROJECTS) {
       const title = document.createElement("div");
       title.className = "project-title";
       title.dataset.projectId = project.id;
@@ -149,52 +137,39 @@
       meta.className = "project-meta";
       meta.textContent = project.meta;
 
-      root.appendChild(title);
-      root.appendChild(meta);
-
-      if (idx < PROJECTS.length - 1) {
-        const gap = document.createElement("div");
-        gap.className = "project-gap";
-        gap.innerHTML = "<br>";
-        root.appendChild(gap);
-      }
-    });
+      root.append(title, meta);
+    }
   }
 
   /* ------------------------------------------------------------------------
-     Top-bar buttons: Contact / Projects / Light / Dark / Title
+     Interactions: header/footer buttons, project-title clicks (delegated),
+     and theme switching. All panel state changes go through closePanels()
+     so exactly one panel can be open at a time.
      ------------------------------------------------------------------------ */
-  function wireUpButtons(refreshScrollerBounds) {
-    const contactBtn  = $(".contact-me");
-    const siteTitle   = $(".site-title");
-    const lightBtn    = $(".light-mode");
-    const darkBtn     = $(".dark-mode");
-    const projectsBtn = $(".projects-button");
+  function setupInteractions(refreshScrollerBounds) {
     const contactPanel = $("#contactPanel");
-    const scroller    = $(".scroller-container");
-    const aboutText   = $(".about-text");
-
+    const scroller     = $(".scroller-container");
+    const aboutText    = $(".about-text");
     const allProjectPanels = $$(".project-panel");
 
-    // Close the contact panel and every project panel.
     function closePanels() {
       contactPanel.classList.remove("show");
       allProjectPanels.forEach((panel) => panel.classList.remove("show"));
     }
 
-    onActivate(contactBtn, () => {
+    onActivate($(".contact-me"), () => {
       const show = !contactPanel.classList.contains("show");
       closePanels();
       contactPanel.classList.toggle("show", show);
     });
 
-    onActivate(siteTitle, () => {
+    onActivate($(".site-title"), () => {
       closePanels();
       scroller.classList.remove("show");
       aboutText.classList.remove("hidden");
     });
 
-    onActivate(projectsBtn, () => {
+    onActivate($(".projects-button"), () => {
       const showScroller = !scroller.classList.contains("show");
       scroller.classList.toggle("show", showScroller);
       aboutText.classList.toggle("hidden", showScroller);
@@ -202,6 +177,17 @@
       // Recompute row opacities on open: scroll position or window size may
       // have changed while the list was hidden.
       if (showScroller && refreshScrollerBounds) requestAnimationFrame(refreshScrollerBounds);
+    });
+
+    // Project titles open their panel (one delegated listener for the list).
+    $(".scroller-content").addEventListener("click", (e) => {
+      const title = e.target.closest(".project-title");
+      if (!title) return;
+      const panel = document.getElementById(title.dataset.projectId);
+      if (!panel) return;
+      const wasOpen = panel.classList.contains("show");
+      closePanels();
+      if (!wasOpen) panel.classList.add("show");
     });
 
     /* Single theme handler — applies the theme locally, persists it, and
@@ -212,8 +198,8 @@
       postToIframe({ type: "theme", theme });
     }
 
-    onActivate(lightBtn, () => setTheme("light"));
-    onActivate(darkBtn, () => setTheme("dark"));
+    onActivate($(".light-mode"), () => setTheme("light"));
+    onActivate($(".dark-mode"),  () => setTheme("dark"));
 
     // Push the *current* theme to the iframe once it has loaded. The
     // localStorage seed in <head> handles cold-start; this re-sends in case
@@ -225,24 +211,6 @@
         postToIframe({ type: "theme", theme });
       });
     }
-  }
-
-  /* ------------------------------------------------------------------------
-     Project titles inside the scroller open the matching project panel.
-     ------------------------------------------------------------------------ */
-  function wireUpProjectTitles() {
-    const allProjectPanels = $$(".project-panel");
-    $$(".project-title").forEach((titleDiv) => {
-      titleDiv.addEventListener("click", () => {
-        const panel = document.getElementById(titleDiv.dataset.projectId);
-        if (panel && panel.classList.contains("show")) {
-          panel.classList.remove("show");
-        } else {
-          allProjectPanels.forEach((p) => p.classList.remove("show"));
-          if (panel) panel.classList.add("show");
-        }
-      });
-    });
   }
 
   /* ------------------------------------------------------------------------
