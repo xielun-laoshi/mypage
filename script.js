@@ -88,6 +88,9 @@ class Scene {
     // which breaks the loop.
     const w = this.$el.clientWidth || 1;
     const h = this.$el.clientHeight || 1;
+    // Re-read the pixel ratio too — it changes when the window moves to a
+    // monitor with a different DPI.
+    this.renderer.setPixelRatio(window.devicePixelRatio);
     // updateStyle = false: the canvas display size is fixed at 100% by CSS, so
     // we only refresh the drawing buffer and camera aspect. The canvas can
     // therefore never overflow the viewport.
