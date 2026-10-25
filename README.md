@@ -6,16 +6,39 @@ This is the sourcecode for my personal website.
 
 | File | Role |
 |---|---|
-| `index.html` | Page markup: header/footer controls, contact panel, one `<article>` per project |
-| `css/main.css` | All page styling; layout anchors live in the `:root` tokens (`--line-inset`, `--line-gap`, `--edge-gap`, `--btn-gap`) |
-| `js/main.js` | Entry point: loader, project list, panel/theme interactions, scroller boundary opacity |
-| `js/field.js` | The particle-wave background: GLSL shaders + a small WebGL renderer (no libraries) |
-| `js/cursor.js` | Elastic custom cursor (its theme-inverting lens is pure CSS) |
-| `fonts/`, `img/` | Self-hosted fonts and the particle sprite (no third-party requests) |
+| `index.html` | Markup: masthead, axes, the field's band, contact panel, one `<article>` per project, footer |
+| `css/main.css` | All styling: tokens (palette, type scale, layout anchors like `--line`), the frame, index, panels, motion, responsive and reduced-motion rules |
+| `js/main.js` | Entry point: hash routing between views, the intro, field framing per view, probe readout, theme sweep, index row opacity |
+| `js/field.js` | The particle field: GLSL shaders + a small WebGL renderer (no libraries) |
+| `js/cursor.js` | The elastic, theme-inverting cursor lens |
+| `js/text.js` | Word-by-word reveals and the mono "decode" effect |
+| `fonts/` | Self-hosted subset fonts, their licenses, and `build.py`, which produced them |
 
-To add or edit a project, edit its `<article class="about-panel project-panel">` in
-`index.html`: `data-title` / `data-meta` are the list row, the article body is the
-detail panel. List order follows document order.
+## Views
+
+The page is one screen with four views, each linkable:
+
+| URL | View |
+|---|---|
+| `/` | Home: the field as a landscape |
+| `/#/projects` | The project index (the field becomes a texture) |
+| `/#/projects/<slug>` | A project's panel, e.g. `/#/projects/ann` |
+| `/#/contact` | Contact (the field settles into a single trace) |
+
+Back/forward and Escape move between them.
+
+To add or edit a project, edit its `<article class="panel project" id="project-…">`
+in `index.html`: `data-title` / `data-meta` are its index row (meta parts are
+separated by ` - `), the article body is its panel, and the slug is the id
+without `project-`. Index order follows document order.
+
+## Fonts
+
+All open source (SIL OFL 1.1), subset to Latin by `fonts/build.py`:
+
+- **SY Display**: [Mona Sans](https://github.com/github/mona-sans), renamed as its license requires for modified copies
+- **Newsreader**: [Newsreader](https://github.com/productiontype/Newsreader) by Production Type
+- **SY Mono**: [Monaspace Neon](https://github.com/githubnext/monaspace), renamed as its license requires
 
 ## Run locally
 
