@@ -23,7 +23,7 @@ The page is one screen with four views, each linkable:
 | `/` | Home: the field as a landscape |
 | `/#/projects` | The project index (the field becomes a texture) |
 | `/#/projects/<slug>` | A project's panel, e.g. `/#/projects/ann` |
-| `/#/contact` | Contact (the field settles into a single trace) |
+| `/#/contact` | Contact (the field calms) |
 
 Back/forward and Escape move between them.
 
@@ -32,13 +32,11 @@ in `index.html`: `data-title` / `data-meta` are its index row (meta parts are
 separated by ` - `), the article body is its panel, and the slug is the id
 without `project-`. Index order follows document order.
 
-## Fonts
+## Font
 
-All open source (SIL OFL 1.1), subset to Latin by `fonts/build.py`:
-
-- **SY Display**: [Mona Sans](https://github.com/github/mona-sans), renamed as its license requires for modified copies
-- **Newsreader**: [Newsreader](https://github.com/productiontype/Newsreader) by Production Type
-- **SY Mono**: [Monaspace Neon](https://github.com/githubnext/monaspace), renamed as its license requires
+One typewriter voice throughout: [Lekton](https://github.com/google/fonts/tree/main/ofl/lekton),
+drawn after Olivetti typewriter faces at ISIA Urbino (SIL OFL 1.1). Regular and
+Bold are subset to Latin by `fonts/build.py`.
 
 ## Run locally
 

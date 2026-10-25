@@ -8,7 +8,7 @@
 
 import { createField } from "./field.js";
 import { startCursor } from "./cursor.js";
-import { splitWords, decode } from "./text.js";
+import { typeIn, retype } from "./text.js";
 
 const $  = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -23,7 +23,7 @@ const SCENES = {
   home:     { shot: "landscape", amplitude: 1,    opacity: 1 },
   projects: { shot: "texture",   amplitude: 1,    opacity: 0.5 },
   project:  { shot: "texture",   amplitude: 1,    opacity: 0.4 },
-  contact:  { shot: "trace",     amplitude: 0.65, opacity: 0.85 },
+  contact:  { shot: "calm",      amplitude: 0.45, opacity: 0.85 },
 };
 const AMBIENT = [0, 0];
 const sceneOf = ({ base, overlay }) => (overlay === "contact" ? "contact" : overlay ? "project" : base);
@@ -52,11 +52,6 @@ const contactPanel = $("#contact");
 
 buildIndex();
 buildPanels();
-splitWords($(".name a"));
-for (const panel of [contactPanel, ...projects.map((p) => p.el)]) {
-  const heading = $("h2", panel);
-  if (heading && !heading.closest(".panel-top")) splitWords(heading);
-}
 
 /** The list rows, built from each article's data-title / data-meta. */
 function buildIndex() {
@@ -68,10 +63,10 @@ function buildIndex() {
     row.innerHTML = `
       <a class="row-link" href="#/projects/${p.slug}" data-action="project" data-slug="${p.slug}">
         <span class="row-no">${pad(p.index + 1)}</span>
-        <span class="row-title"><span></span></span>
+        <span class="row-title"></span>
         <span class="row-meta"></span>
       </a>`;
-    $(".row-title > span", row).textContent = p.title;
+    $(".row-title", row).textContent = p.title;
     $(".row-meta", row).textContent = p.meta.join("  /  ");
     p.row = row;
     p.link = $(".row-link", row);
@@ -93,7 +88,7 @@ function buildPanels() {
 
     const meta = document.createElement("p");
     meta.className = "panel-meta";
-    meta.textContent = p.meta.join("  /  ");
+    meta.textContent = p.meta.join("\n"); // one typed line each (white-space: pre-line)
     heading.after(meta);
     for (const para of $$("p", content)) if (para !== meta && !para.querySelector("a")) para.dataset.cursor = "text";
 
@@ -111,8 +106,8 @@ function buildPanels() {
     steps.className = "panel-steps";
     steps.setAttribute("aria-label", "More projects");
     steps.innerHTML = `
-      <a href="#/projects/${prev.slug}" data-action="step" data-slug="${prev.slug}"><span aria-hidden="true">←</span> Prev ${pad(prev.index + 1)}</a>
-      <a href="#/projects/${next.slug}" data-action="step" data-slug="${next.slug}">Next ${pad(next.index + 1)} <span aria-hidden="true">→</span></a>`;
+      <a href="#/projects/${prev.slug}" data-action="step" data-slug="${prev.slug}"><span aria-hidden="true">&lt;-</span> Prev ${pad(prev.index + 1)}</a>
+      <a href="#/projects/${next.slug}" data-action="step" data-slug="${next.slug}">Next ${pad(next.index + 1)} <span aria-hidden="true">-&gt;</span></a>`;
 
     p.el.prepend(top);
     p.el.append(scroll, steps);
@@ -192,7 +187,11 @@ function render(next) {
   }
 
   swapPanels(prev.overlay, next.overlay);
-  if (next.base === "projects" && prev.base !== "projects") requestAnimationFrame(refreshBands);
+  if (next.base === "projects" && prev.base !== "projects") {
+    requestAnimationFrame(refreshBands);
+    // The list prints itself, row by row.
+    for (const p of projects) typeIn($(".row-title", p.row), { delay: 60 + p.index * 70, speed: 7, still });
+  }
   updateField();
 
   const project = bySlug.get(next.overlay);
@@ -216,6 +215,7 @@ function swapPanels(fromKey, toKey) {
     to.getBoundingClientRect(); // commit the start state before opening
     $(".panel-scroll", to)?.scrollTo(0, 0);
     to.classList.add("is-open");
+    typeOut(to);
     if (!body.classList.contains("intro")) $("h2", to).focus({ preventScroll: true });
   }
   if (from) {
@@ -224,6 +224,17 @@ function swapPanels(fromKey, toKey) {
     if (focusInside && !to) (trigger?.isConnected ? trigger : $(".nav a")).focus({ preventScroll: true });
   }
   if (to && swap) setTimeout(() => to.classList.remove("is-swap"), 700);
+}
+
+/** A panel's typed parts: a project's heading and then its spec lines; the
+    contact links one after another. */
+function typeOut(panel) {
+  if (panel === contactPanel) {
+    $$(".contact-list a", panel).forEach((link, i) => typeIn(link, { delay: 300 + i * 160, speed: 30, still }));
+    return;
+  }
+  const heading = typeIn($("h2", panel), { delay: 220, speed: 9, still });
+  typeIn($(".panel-meta", panel), { delay: heading + 80, speed: 8, still });
 }
 
 /* --------------------------------------------------------------------------
@@ -245,7 +256,7 @@ function updateField() {
   const text = `${stats ? `${stats.cols} × ${stats.rows} POINTS  ·  ` : ""}${label}`;
   if (status.dataset.text !== text) {
     status.dataset.text = text;
-    decode(status, text, { duration: 420, still });
+    retype(status, text, { speed: 12, still });
   }
 }
 
@@ -375,7 +386,8 @@ function setTheme(theme) {
 /* --------------------------------------------------------------------------
    Intro: a single line draws across the middle, parts into the two axes,
    and the flat line of points between them rises into the landscape; then
-   the type arrives. Any input skips ahead. Reduced motion: no choreography.
+   the page types itself in. Any input skips ahead. Reduced motion: none of
+   it.
    -------------------------------------------------------------------------- */
 async function intro() {
   const route = parse();
@@ -404,7 +416,9 @@ async function intro() {
   await pause(560);
   listening.abort();
   finish();
-  decode(readout, readout.textContent, { duration: 600, delay: 500, still });
+  // The page types its own label: the name, then the caption.
+  const name = typeIn($(".name a"), { delay: 80, speed: 45 });
+  typeIn($(".about"), { delay: name + 120, speed: 9 });
 }
 
 intro();

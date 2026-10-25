@@ -7,28 +7,23 @@
    ========================================================================== */
 
 /* --------------------------------------------------------------------------
-   Fonts (subset WOFF2s built by fonts/build.py; OFL, see fonts/OFL-*.txt)
+   Font: Lekton, a typewriter face drawn after Olivetti machines (subset
+   WOFF2s built by fonts/build.py; OFL, see fonts/OFL-Lekton.txt). One typed
+   voice throughout, like a hand-typed label: hierarchy comes from size,
+   weight, case and spacing.
    -------------------------------------------------------------------------- */
 
 @font-face {
-  font-family: "SY Display"; /* Mona Sans, renamed per its OFL Reserved Font Name */
-  src: url("../fonts/SYDisplay.woff2") format("woff2");
-  font-weight: 200 600;
-  font-stretch: 100% 125%;
+  font-family: "Lekton";
+  src: url("../fonts/Lekton-Regular.woff2") format("woff2");
+  font-weight: 400;
   font-display: swap;
 }
 
 @font-face {
-  font-family: "SY Mono"; /* Monaspace Neon, renamed per its OFL Reserved Font Name */
-  src: url("../fonts/SYMono.woff2") format("woff2");
-  font-weight: 400 600;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: "Newsreader";
-  src: url("../fonts/Newsreader.woff2") format("woff2");
-  font-weight: 300 500;
+  font-family: "Lekton";
+  src: url("../fonts/Lekton-Bold.woff2") format("woff2");
+  font-weight: 700;
   font-display: swap;
 }
 
@@ -44,9 +39,7 @@
   --ink-2: #9b9b9b;   /* secondary text, 6.7:1 on --bg */
   --ink-3: #5c5c5c;   /* ticks and quiet marks */
 
-  --display: "SY Display", "Helvetica Neue", Arial, sans-serif;
-  --text: "Newsreader", Georgia, serif;
-  --mono: "SY Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --type: "Lekton", "Courier New", ui-monospace, monospace;
 
   /* Layout anchors. The axes sit --line from the top and bottom edges; the
      rows of controls anchor to the same value, --gap away from their axis. */
@@ -58,13 +51,14 @@
   --pad: clamp(20px, 2.8vw, 76px);
 
   /* Type scales with the viewport width up to large desktop displays. */
-  --fs-label: clamp(10.5px, 8px + 0.26vw, 14px);
-  --fs-small: calc(var(--fs-label) * 0.95);
-  --fs-name: clamp(2.1rem, 4.4vw, 7rem);
-  --fs-title: clamp(1.6rem, 1rem + 1.9vw, 4rem);
-  --fs-heading: clamp(1.55rem, 1rem + 1.2vw, 3.2rem);
-  --fs-about: clamp(1.05rem, 0.8rem + 0.55vw, 2rem);
-  --fs-body: clamp(1.0625rem, 0.95rem + 0.3vw, 1.5rem);
+  --fs-label: clamp(11px, 8.6px + 0.27vw, 14.5px);   /* typed caps: nav, controls */
+  --fs-small: calc(var(--fs-label) * 0.95);           /* readout, status */
+  --fs-spec: clamp(12.5px, 10.6px + 0.22vw, 16px);    /* typed spec lines */
+  --fs-name: min(clamp(1.4rem, 2.1vw, 3.2rem), var(--line) * 0.32); /* fits short screens */
+  --fs-title: clamp(1.4rem, 0.7rem + 1.6vw, 3rem);
+  --fs-heading: clamp(1.25rem, 0.8rem + 0.7vw, 2rem);
+  --fs-about: clamp(13px, 10.6px + 0.3vw, 17px);
+  --fs-body: clamp(15px, 13px + 0.2vw, 18px);
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
@@ -96,7 +90,7 @@ html, body {
 }
 
 body {
-  font: 400 var(--fs-body) / 1.55 var(--text);
+  font: 400 var(--fs-body) / 1.7 var(--type);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -124,6 +118,18 @@ button {
 
 a, button { -webkit-tap-highlight-color: transparent; }
 
+.nowrap { white-space: nowrap; }
+
+/* Read by assistive tech, not shown. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 :focus-visible {
   outline: 1px solid var(--ink);
   outline-offset: 5px;
@@ -131,41 +137,49 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 ::selection { background: var(--ink); color: var(--bg); }
 
-/* Small caps-and-numbers voice for labels, readouts and controls. */
-.nav, .readout, .status, .theme, .row-no, .row-meta, .panel-top, .panel-meta,
-.panel-steps, .panel-link, .contact-list span, .source {
-  font-family: var(--mono);
+/* Typed caps, like the field names on a label: navigation, controls,
+   counters, readouts. */
+.nav, .readout, .status, .theme, .row-no, .panel-top, .panel-steps {
   font-size: var(--fs-label);
-  font-weight: 400;
   line-height: 1.4;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "calt" 0;
+}
+
+/* Typed spec lines (sentence case), like "Eau de Parfum / 50 ml". */
+.row-meta, .panel-meta, .panel-link, .contact-list span, .source {
+  font-size: var(--fs-spec);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
 }
 
 /* --------------------------------------------------------------------------
    Frame: masthead, axes, band, footer
    -------------------------------------------------------------------------- */
 
+/* The name floats centered in the band above the top axis (the controls,
+   by contrast, sit on the axes): typed caps, spaced like a label. */
 .name {
   position: fixed;
   z-index: 40;
+  top: 0;
   left: var(--edge);
-  bottom: calc(100% - var(--line) + var(--gap));
-  font: 250 var(--fs-name) / 0.9 var(--display);
-  font-stretch: 112%;
-  letter-spacing: -0.025em;
+  height: var(--line);
+  display: flex;
+  align-items: center;
+  font: 400 var(--fs-name) / 1 var(--type);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
 .name a {
   display: block;
-  transition: font-stretch 0.9s var(--ease-out), font-weight 0.9s var(--ease-out);
+  transition: letter-spacing 0.9s var(--ease-out);
 }
 
-/* The name breathes out along its width axis. */
+/* The name breathes out, its letters easing apart. */
 @media (hover: hover) {
-  .name a:hover { font-stretch: 120%; font-weight: 290; }
+  .name a:hover { letter-spacing: 0.24em; }
 }
 
 .nav {
@@ -286,21 +300,24 @@ a, button { -webkit-tap-highlight-color: transparent; }
   height: 100%;
 }
 
+/* A caption on the field's bottom-left, mirroring the readout at top-right:
+   both sit --gap inside their axis. */
 .about {
   position: fixed;
   z-index: 6;
   left: var(--edge);
-  top: calc(var(--line) + clamp(22px, 4.6vh, 48px));
-  max-width: 21em;
-  font: 400 var(--fs-about) / 1.36 var(--text);
-  text-wrap: pretty;
+  bottom: calc(var(--line) + var(--gap));
+  max-width: min(48ch, 100vw - 2 * var(--edge)); /* 46 characters + tracking */
+  font: 400 var(--fs-about) / 1.65 var(--type);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
   transition: opacity 0.7s var(--ease-out) 0.25s, transform 1s var(--ease-out) 0.25s, visibility 0s;
 }
 
 [data-view="projects"] .about {
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-0.4em);
+  transform: translateY(0.4em);
   transition: opacity 0.3s ease, transform 0.3s ease, visibility 0s 0.3s;
 }
 
@@ -336,21 +353,18 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 /* --------------------------------------------------------------------------
-   Words rise out of their own masks (js/text.js splitWords)
+   Typing (js/text.js typeIn): every character is wrapped in .ch, and each
+   one is struck in after the one before it, like keys.
    -------------------------------------------------------------------------- */
 
-.word {
-  display: inline-block;
-  overflow: hidden;
-  vertical-align: top;
-  padding: 0.08em 0 0.16em;
-  margin: -0.08em 0 -0.16em;
+.is-typing .ch {
+  visibility: hidden;
+  animation: strike 1ms steps(1) forwards;
+  animation-delay: calc(var(--type-delay, 0ms) + var(--n) * var(--type-speed, 12ms));
 }
 
-.word > span { display: inline-block; }
-
-.name .word > span {
-  transition: transform 1.2s var(--ease-out) calc(0.05s + var(--i) * 0.08s);
+@keyframes strike {
+  to { visibility: visible; }
 }
 
 /* --------------------------------------------------------------------------
@@ -410,34 +424,21 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .row-title {
   display: block;
-  overflow: hidden;
-  padding-bottom: 0.08em;
-  font: 300 var(--fs-title) / 1.04 var(--display);
-  letter-spacing: -0.016em;
-  transition: transform 0.7s var(--ease-out);
-}
-
-.row-title > span {
-  display: block;
+  font: 400 var(--fs-title) / 1.15 var(--type);
   text-wrap: balance;
-  transform: translateY(110%);
-  transition: transform 0s 0.35s;
+  transition: transform 0.7s var(--ease-out);
 }
 
 .row-meta {
   grid-column: 2;
-  margin-top: 0.9em;
+  margin-top: 0.5em;
   color: var(--ink-2);
 }
 
+/* Titles type themselves in (js/main.js); numbers and specs follow. */
 .row-no, .row-meta {
   opacity: 0;
   transition: opacity 0s 0.35s, color 0.4s ease;
-}
-
-[data-view="projects"] .row-title > span {
-  transform: none;
-  transition: transform 1.05s var(--ease-out) calc(0.1s + var(--i) * 0.06s);
 }
 
 [data-view="projects"] .row-no,
@@ -535,15 +536,20 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .panel-scroll::-webkit-scrollbar { display: none; }
 
 .panel-body h2 {
-  font: 330 var(--fs-heading) / 1.1 var(--display);
-  letter-spacing: -0.012em;
+  font: 700 var(--fs-heading) / 1.3 var(--type);
+  letter-spacing: 0.01em;
   text-wrap: balance;
 }
 
 .panel h2 { outline: none; } /* focused programmatically when a panel opens */
 
+/* The specs, stacked between hairlines like the typed lines on a label. */
 .panel-meta {
-  margin-top: 1.5em;
+  margin-top: 1.4em;
+  padding: 0.8em 0;
+  border-top: 1px solid var(--ink-3);
+  border-bottom: 1px solid var(--ink-3);
+  white-space: pre-line;
   color: var(--ink-2);
 }
 
@@ -554,51 +560,34 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .panel-body > p + p:not(.panel-meta) { margin-top: 1.4em; }
 
-.panel-link {
-  display: inline-block;
-  border-bottom: 1px solid var(--ink-3);
-  padding-bottom: 0.15em;
-  transition: border-color 0.3s ease;
-}
-
-.panel-link::after, .contact-list a::after, .source a::after {
-  content: "↗";
-  display: inline-block;
-  margin-left: 0.45em;
-  font-family: var(--mono);
-  transition: transform 0.5s var(--ease-out);
+/* Typed links: underlined, nothing else. */
+.panel-link, .source a, .contact-list a {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: var(--ink-3);
+  transition: text-decoration-color 0.3s ease, transform 0.6s var(--ease-out);
 }
 
 @media (hover: hover) {
-  .panel-link:hover { border-color: currentColor; }
-  .panel-link:hover::after, .contact-list a:hover::after, .source a:hover::after { transform: translate(0.15em, -0.15em); }
+  .panel-link:hover, .source a:hover, .contact-list a:hover { text-decoration-color: currentColor; }
 }
 
-/* Panel content arrives in sequence once the sheet is moving. */
-.panel-top, .panel-steps, .panel-body > :not(h2, .contact-list), .contact-list li {
+/* Panel content arrives in sequence once the sheet is moving; the heading
+   and specs type themselves in (js/main.js). */
+.panel-top, .panel-steps, .panel-body > :not(h2, .panel-meta, .contact-list), .contact-list li {
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.3s ease, transform 0s 0.85s;
 }
 
-.panel h2 .word > span {
-  transform: translateY(110%);
-  transition: transform 0s 0.85s;
-}
-
-.panel.is-open :is(.panel-top, .panel-steps, .panel-body > :not(h2, .contact-list), .contact-list li) {
+.panel.is-open :is(.panel-top, .panel-steps, .panel-body > :not(h2, .panel-meta, .contact-list), .contact-list li) {
   opacity: 1;
   transform: none;
   transition: opacity 0.9s var(--ease-out) var(--delay, 0.45s), transform 1.1s var(--ease-out) var(--delay, 0.45s);
 }
 
-.panel.is-open h2 .word > span {
-  transform: none;
-  transition: transform 1.1s var(--ease-out) calc(0.22s + var(--i) * 0.035s);
-}
-
 .panel-top { --delay: 0.3s; }
-.panel-meta { --delay: 0.42s; }
 .panel-body > p:nth-of-type(2) { --delay: 0.5s; }
 .panel-body > p:nth-of-type(3) { --delay: 0.58s; }
 .panel-steps { --delay: 0.66s; }
@@ -612,19 +601,13 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .contact-list a {
   display: inline-block;
-  font: 300 clamp(2rem, 1.2rem + 2.6vw, 3.6rem) / 1.05 var(--display);
-  letter-spacing: -0.02em;
-  transition: transform 0.6s var(--ease-out);
+  font: 400 clamp(1.8rem, 1rem + 2.2vw, 3.2rem) / 1.15 var(--type);
 }
-
-.contact-list a::after { font-size: 0.42em; vertical-align: 0.9em; }
 
 .contact-list span {
   display: block;
-  margin-top: 0.7em;
+  margin-top: 0.5em;
   color: var(--ink-2);
-  text-transform: none;
-  letter-spacing: 0.04em;
 }
 
 @media (hover: hover) {
@@ -635,8 +618,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
   margin-top: clamp(40px, 9vh, 96px);
   color: var(--ink-2);
 }
-
-.source a { border-bottom: 1px solid var(--ink-3); padding-bottom: 0.15em; }
 
 /* --------------------------------------------------------------------------
    Cursor: a lens that inverts what is under it (js/cursor.js moves it)
@@ -696,7 +677,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
   transition: clip-path 1.2s var(--ease-in-out);
 }
 
-.intro .name .word > span { transform: translateY(110%); }
+.intro .name { visibility: hidden; } /* typed in as the intro ends */
 
 .nav, .footer > *, .readout {
   transition: opacity 1s var(--ease-out) 0.35s, transform 1.2s var(--ease-out) 0.35s, color 0.4s ease;
@@ -774,7 +755,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
   .nav a::before, .theme button::before { left: auto; right: -1.1em; }
 
-  .about { max-width: 17.5em; }
   .status { display: none; }
 
   .row-link { grid-template-columns: 2.9em 1fr; }

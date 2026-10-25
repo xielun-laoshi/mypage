@@ -12,9 +12,8 @@
   <meta property="og:url" content="https://www.sheronyang.com/" />
   <link rel="canonical" href="https://www.sheronyang.com/" />
   <link rel="icon" href="S.ico" />
-  <link rel="preload" href="fonts/SYDisplay.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/SYMono.woff2" as="font" type="font/woff2" crossorigin />
-  <link rel="preload" href="fonts/Newsreader.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/Lekton-Regular.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/Lekton-Bold.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="modulepreload" href="js/field.js" />
   <link rel="modulepreload" href="js/cursor.js" />
   <link rel="modulepreload" href="js/text.js" />
@@ -44,7 +43,8 @@
     <!-- Particle field (js/field.js), clipped to the band between the axes -->
     <div class="band" aria-hidden="true"><canvas class="field"></canvas></div>
 
-    <p class="about">Math & CS undergrad exploring at the intersection of ML, agents, and quant finance. Always looking for unsolved problems and top-tier people to build with.</p>
+    <p class="about">Math & CS undergrad exploring at the intersection of ML, agents, and quant finance.<br />
+      Always looking for unsolved problems and <span class="nowrap">top-tier</span> people to build with.</p>
     <p class="readout" aria-hidden="true">X 0.000   Y 0.000   Z +00.00</p>
 
     <!-- Project index: js/main.js builds one row per project <article> -->
@@ -180,6 +180,7 @@
       .name { position: absolute; }
       main { padding: 24vh var(--edge) 20vh; }
       .intro :is(.nav, .about), .panel :is(.panel-top, .panel-body > *, .contact-list li) { opacity: 1; transform: none; }
+      .intro .name { visibility: visible; }
       .about, .panel, .panel-top, .panel-scroll {
         position: static; width: auto; max-width: 46em; padding: 0; overflow: visible;
         transform: none; visibility: visible; border: 0;

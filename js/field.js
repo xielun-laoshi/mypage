@@ -1,20 +1,27 @@
 /* ==========================================================================
    Particle field — the landscape between the two lines.
-   A 700×400 plane of points displaced by two Perlin-noise fields. A camera
-   glides between framings (an edge-on line, a grazing trace, an oblique
-   landscape, a top-down texture); the pointer lifts the surface under it and
+   A plane of points displaced by two Perlin-noise fields. A camera glides
+   between framings (an edge-on line, an oblique landscape, a top-down
+   texture, a calm overview); the pointer lifts the surface under it and
    clicks send ripples through it. Plain WebGL: one program, one draw call.
    ========================================================================== */
 
-const PLANE = { width: 700, depth: 400 };
+/* The plane, in world units: x across (±halfWidth), y into the distance
+   (near … far). It overflows the band in every framing below (the band
+   clips it), and widens past fanFrom, where perspective shrinks it, so the
+   far corners stay covered on wide screens. The wave keeps the scale it had
+   on the original 700×400 plane. */
+const PLANE = { halfWidth: 400, near: -170, far: 370, fanFrom: 150, fan: 0.6 };
+const WAVE_SCALE = [700, 400];
 
 /* Camera framings: elevation above the plane (deg), distance, look-at point
-   along the plane's depth, vertical field of view (deg). */
+   along the plane's depth, vertical field of view (deg). Every framing but
+   the intro's edge-on line sees only plane between the two axes. */
 const SHOTS = {
   line:      { elevation: 0.35, distance: 820, target: 0,   fov: 16 },
-  trace:     { elevation: 5,    distance: 820, target: -70, fov: 16 },
-  landscape: { elevation: 23,   distance: 760, target: -40, fov: 20 },
+  landscape: { elevation: 33,   distance: 720, target: -30, fov: 20 },
   texture:   { elevation: 89.3, distance: 800, target: 0,   fov: 15 },
+  calm:      { elevation: 42,   distance: 700, target: 0,   fov: 18 },
 };
 
 /* How fast each property chases its target (1/s, exponential approach). */
@@ -52,10 +59,12 @@ float cnoise(vec2 P) {
 
 float map(float v, float a, float b, float c, float d) { return c + (d - c) * (v - a) / (b - a); }
 
-// The wave: one noise field shapes a peak toward the plane's center, the
-// other modulates it over time; their product is the height.
-float wave(vec2 uv, float t, vec2 seed) {
-  vec2 peak = 1.0 - abs(0.5 - uv);
+// The wave at plane point p: one noise field shapes a peak toward the
+// center (easing off, never quite flat, toward the far reaches), the other
+// modulates it over time; their product is the height.
+float wave(vec2 p, float t, vec2 seed) {
+  vec2 uv = p / vec2(${WAVE_SCALE[0].toFixed(1)}, ${WAVE_SCALE[1].toFixed(1)}) + 0.5;
+  vec2 peak = max(1.0 - abs(0.5 - uv), 0.3);
   float shape = map(cnoise(vec2(0.3 * t + uv.x * 5.0 + seed.x, uv.y * 5.0 + seed.y)), 0.0, 1.0, -2.0, peak.x * peak.y * 30.0);
   float swell = map(cnoise(vec2(-0.3 * t + uv.x * 5.0 - seed.y, uv.y * 5.0 + seed.x)), 0.0, 1.0, -2.0, 25.0);
   return shape * 0.06 * swell;
@@ -74,6 +83,7 @@ uniform vec2 uViewport;           // canvas size, CSS px
 uniform float uPixelRatio;
 uniform float uDistance;          // camera distance, for size attenuation
 uniform float uSize;              // point size, CSS px
+uniform float uSpread;            // plane width factor (ultrawide bands)
 uniform float uTime;
 uniform float uClock;             // seconds, for ripples
 uniform float uAmplitude;
@@ -90,11 +100,14 @@ ${NOISE_GLSL}
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
 void main() {
-  // Plane position (x across, y into the distance), lightly jittered off the
-  // grid so the lattice never beats against the pixel grid.
+  // Plane position (x across, y into the distance; row 0 is the far edge),
+  // lightly jittered off the grid so the lattice never beats against the
+  // pixel grid.
   vec2 jitter = vec2(hash(grid), hash(grid + 17.0)) - 0.5;
-  vec2 uv = vec2(0.0, 1.0) + vec2(1.0, -1.0) * (grid + 0.35 * jitter) / uGrid;
-  vec2 p = (uv - 0.5) * vec2(${PLANE.width.toFixed(1)}, ${PLANE.depth.toFixed(1)});
+  vec2 t = (grid + 0.35 * jitter) / uGrid;
+  float y = mix(${PLANE.far.toFixed(1)}, ${PLANE.near.toFixed(1)}, t.y);
+  float halfWidth = (${PLANE.halfWidth.toFixed(1)} + max(y - ${PLANE.fanFrom.toFixed(1)}, 0.0) * ${PLANE.fan.toFixed(2)}) * uSpread;
+  vec2 p = vec2((2.0 * t.x - 1.0) * halfWidth, y);
 
   // Where the flat point lands on screen: pointer and ripples act there.
   vec4 rest = uProjection * uModelView * vec4(p, 0.0, 1.0);
@@ -113,18 +126,19 @@ void main() {
     }
   }
 
-  float h = wave(uv, uTime, uSeed) * uAmplitude + lift * 9.0 + ring * 14.0;
+  float h = wave(p, uTime, uSeed) * uAmplitude + lift * 9.0 + ring * 14.0;
   vec4 view = uModelView * vec4(p, h, 1.0);
   gl_Position = uProjection * view;
   gl_PointSize = uSize * uPixelRatio * (uDistance / -view.z) * (1.0 + 0.4 * lift);
 
-  // Fade the far edge into the dark, and quieten points near the band's
-  // bottom and top edges so the field settles against the axes.
-  float y = gl_Position.y / gl_Position.w;
-  float edges = mix(0.3, 1.0, smoothstep(-1.0, -0.45, y)) * mix(0.5, 1.0, smoothstep(1.0, 0.8, y));
+  // Haze dims the distance, and points quieten near the band's bottom and
+  // top edges so the field settles against the axes; nothing fades out.
+  float sy = gl_Position.y / gl_Position.w;
+  float edges = mix(0.3, 1.0, smoothstep(-1.0, -0.45, sy)) * mix(0.5, 1.0, smoothstep(1.0, 0.8, sy));
+  float haze = mix(1.0, 0.5, smoothstep(1.0, 1.7, -view.z / uDistance));
   vHeight = h;
   vLight = 0.5 * lift + 1.4 * ring;
-  vFade = (1.0 - smoothstep(110.0, 200.0, p.y)) * edges;
+  vFade = edges * haze;
 }
 `;
 
@@ -164,12 +178,18 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   const noop = () => {};
   if (!gl) return { ready: Promise.resolve(), set: noop, setTheme: noop, pointer: noop, ripple: noop, sample: () => null, stats: () => null };
 
-  // Point density: the light grid serves small screens, and any device that
-  // cannot hold the dense one at a smooth frame rate (see watchFrameRate).
+  // Bands wider than 2.6:1 (ultrawide screens) see more of the plane's
+  // sides; `spread` widens it to match, adding columns to keep the density.
+  const spreadFor = (w, h) => Math.max(1, Math.round((w / h / 2.6) * 10) / 10);
+  let spread = spreadFor(canvas.clientWidth || 1, canvas.clientHeight || 1);
+
+  // Point density (about one point per 1.17 × 1 world units when dense):
+  // the light grid serves small screens, and any device that cannot hold the
+  // dense one at a smooth frame rate (see watchFrameRate).
   let grid, count, pointSize;
   const useGrid = (isDense) => {
     dense = isDense;
-    grid = dense ? { cols: 600, rows: 400 } : { cols: 300, rows: 200 };
+    grid = { cols: Math.round((dense ? 686 : 343) * spread), rows: dense ? 540 : 270 };
     count = (grid.cols + 1) * (grid.rows + 1);
     pointSize = dense ? 2.0 : 2.6;
   };
@@ -213,10 +233,13 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       for (let col = 0; col <= grid.cols; col++) { cells[o++] = col; cells[o++] = row; }
     }
     gl.bufferData(gl.ARRAY_BUFFER, cells, gl.STATIC_DRAW);
-    if (u) {
-      gl.uniform2f(u.uGrid, grid.cols, grid.rows);
-      gl.uniform1f(u.uSize, pointSize);
-    }
+    if (u) applyGrid();
+  }
+
+  function applyGrid() {
+    gl.uniform2f(u.uGrid, grid.cols, grid.rows);
+    gl.uniform1f(u.uSize, pointSize);
+    gl.uniform1f(u.uSpread, spread);
   }
 
   /* Step down to the light grid if the dense one can't hold ~40 fps. Judged
@@ -253,12 +276,11 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     }
     gl.useProgram(program);
     u = {};
-    for (const name of ["uGrid", "uModelView", "uProjection", "uViewport", "uPixelRatio", "uDistance", "uSize",
-      "uTime", "uClock", "uAmplitude", "uSeed", "uPointer", "uRipples", "uColor", "uOpacity"]) {
+    for (const name of ["uGrid", "uSpread", "uModelView", "uProjection", "uViewport", "uPixelRatio", "uDistance",
+      "uSize", "uTime", "uClock", "uAmplitude", "uSeed", "uPointer", "uRipples", "uColor", "uOpacity"]) {
       u[name] = gl.getUniformLocation(program, name);
     }
-    gl.uniform2f(u.uGrid, grid.cols, grid.rows);
-    gl.uniform1f(u.uSize, pointSize);
+    applyGrid();
     applySize();
     return true;
   }
@@ -270,6 +292,12 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     size = { w, h, dpr };
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
+    const nextSpread = spreadFor(w, h);
+    if (nextSpread !== spread) {
+      spread = nextSpread;
+      useGrid(dense);
+      uploadGrid();
+    }
     if (u) applySize();
     dirty = true;
   }
@@ -399,16 +427,16 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       ripples.set([x, y, clock, 1], (rippleNext++ % RIPPLES) * 4);
     },
 
-    /** The surface under a canvas point: { x, y } across/into the plane
-        (0–1) and its height, or null when the point misses the plane. */
+    /** The surface under a canvas point: its plane position { x, y } (world
+        units) and height, or null when the point misses the plane. */
     sample(x, y) {
       if (!matrices) updateCamera();
       const hit = intersectPlane(matrices, camera, x / size.w, y / size.h);
       if (!hit) return null;
-      const uvx = hit[0] / PLANE.width + 0.5;
-      const uvy = hit[1] / PLANE.depth + 0.5;
-      if (uvx < 0 || uvx > 1 || uvy < 0 || uvy > 1) return null;
-      return { x: uvx, y: uvy, height: waveHeight(uvx, uvy, time, now.seed) * now.amplitude };
+      const [px, py] = hit;
+      const halfWidth = (PLANE.halfWidth + Math.max(py - PLANE.fanFrom, 0) * PLANE.fan) * spread;
+      if (py < PLANE.near || py > PLANE.far || Math.abs(px) > halfWidth) return null;
+      return { x: px, y: py, height: waveHeight(px, py, time, now.seed) * now.amplitude };
     },
 
     stats: () => ({ points: count, cols: grid.cols + 1, rows: grid.rows + 1, time, frames }),
@@ -492,8 +520,9 @@ function cnoise(px, py) {
 
 const mapRange = (v, a, b, c, d) => c + ((d - c) * (v - a)) / (b - a);
 
-function waveHeight(ux, uy, t, seed) {
-  const px = 1 - Math.abs(0.5 - ux), py = 1 - Math.abs(0.5 - uy);
+function waveHeight(x, y, t, seed) {
+  const ux = x / WAVE_SCALE[0] + 0.5, uy = y / WAVE_SCALE[1] + 0.5;
+  const px = Math.max(1 - Math.abs(0.5 - ux), 0.3), py = Math.max(1 - Math.abs(0.5 - uy), 0.3);
   const shape = mapRange(cnoise(0.3 * t + ux * 5 + seed[0], uy * 5 + seed[1]), 0, 1, -2, px * py * 30);
   const swell = mapRange(cnoise(-0.3 * t + ux * 5 - seed[1], uy * 5 + seed[0]), 0, 1, -2, 25);
   return shape * 0.06 * swell;
