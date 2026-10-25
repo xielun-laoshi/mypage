@@ -6,20 +6,21 @@ This is the sourcecode for my personal website.
 
 | File | Role |
 |---|---|
-| `index.html` | Page markup: header/footer controls, contact + project detail panels |
-| `main.css` | All page styling; layout anchors live in the `:root` tokens (`--line-inset`, `--line-gap`, `--edge-gap`, `--btn-gap`) |
-| `main.js` | Project list data (`PROJECTS`) + rendering, panel/theme interactions, scroller boundary opacity, custom cursor |
-| `trial.html` | Embedded iframe: GLSL shaders + host page for the particle-wave background |
-| `script.js` | Three.js scene inside the iframe (renders the wave, follows the page theme) |
-| `style.css` | Iframe-local styles (full-bleed canvas, no scrollbars) |
-| `three.min.js`, `spark1.png` | Vendored Three.js r86 and the particle sprite (no third-party requests) |
+| `index.html` | Page markup: header/footer controls, contact panel, one `<article>` per project |
+| `css/main.css` | All page styling; layout anchors live in the `:root` tokens (`--line-inset`, `--line-gap`, `--edge-gap`, `--btn-gap`) |
+| `js/main.js` | Entry point: loader, project list, panel/theme interactions, scroller boundary opacity |
+| `js/field.js` | The particle-wave background: GLSL shaders + a small WebGL renderer (no libraries) |
+| `js/cursor.js` | Elastic custom cursor (its theme-inverting lens is pure CSS) |
+| `fonts/`, `img/` | Self-hosted fonts and the particle sprite (no third-party requests) |
 
-To add or edit a project: add an entry to `PROJECTS` in `main.js` and a matching
-`<div class="about-panel project-panel" id="...">` panel in `index.html`.
+To add or edit a project, edit its `<article class="about-panel project-panel">` in
+`index.html`: `data-title` / `data-meta` are the list row, the article body is the
+detail panel. List order follows document order.
 
 ## Run locally
 
-Any static server works, e.g.:
+The scripts are ES modules, so open the site through any static server
+(not `file://`), e.g.:
 
 ```
 npx http-server -p 4173 -c-1 .

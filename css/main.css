@@ -8,6 +8,20 @@
   box-sizing: border-box;
 }
 
+/* Buttons are bare text: they take their type and color from context. */
+button {
+  appearance: none;
+  background: none;
+  border: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  word-spacing: inherit;
+  line-height: inherit;
+  text-align: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
 /* --------------------------------------------------------------------------
    Loader
    -------------------------------------------------------------------------- */
@@ -53,13 +67,12 @@
 }
 
 /* --------------------------------------------------------------------------
-   Fonts — WOFF2 first (half the size of the OTFs), OTF as fallback
+   Fonts
    -------------------------------------------------------------------------- */
 
 @font-face {
   font-family: "SpaceMono";
-  src: url("SF-Pro-Rounded-Light.woff2") format("woff2"),
-       url("SF-Pro-Rounded-Light.otf") format("opentype");
+  src: url("../fonts/SF-Pro-Rounded-Light.woff2") format("woff2");
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -67,8 +80,7 @@
 
 @font-face {
   font-family: "SpaceMonoBold";
-  src: url("SF-Pro-Rounded-Medium.woff2") format("woff2"),
-       url("SF-Pro-Rounded-Medium.otf") format("opentype");
+  src: url("../fonts/SF-Pro-Rounded-Medium.woff2") format("woff2");
   font-weight: bold;
   font-style: normal;
   font-display: swap;
@@ -141,7 +153,7 @@ body {
 }
 
 /* Theme-inversion lens: the cursor interior re-renders whatever is beneath it
-   (text, lines, panels, the WebGL wave in the iframe) in the OPPOSITE theme.
+   (text, lines, panels, the WebGL wave) in the OPPOSITE theme.
    backdrop-filter recolors the already-composited pixels under the element,
    clipped to the border-radius, so the existing rAF transform that moves the
    cursor drives the lens with zero extra JS and no added latency.
@@ -206,24 +218,13 @@ body {
 }
 
 /* --------------------------------------------------------------------------
-   Iframe (clipped between the top and bottom lines)
+   Particle field (clipped between the top and bottom lines)
    -------------------------------------------------------------------------- */
 
-.iframe-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 1; /* above iframe, captures mouse so the iframe stays inert */
-  pointer-events: auto;
-  background: transparent;
-}
-
-/* The container sits exactly between the top and bottom lines and clips
-   anything that would extend past them. --line-inset carries the vh/dvh
-   handling, so the edges track the lines on mobile browser chrome too. */
-.iframe-mask-container {
+/* The mask sits exactly between the top and bottom lines and clips anything
+   that would extend past them. --line-inset carries the vh/dvh handling, so
+   the edges track the lines on mobile browser chrome too. */
+.field-mask {
   position: fixed;
   top: var(--line-inset);
   left: 0;
@@ -232,10 +233,10 @@ body {
   overflow: hidden;
 }
 
-/* The iframe is intentionally taller than the container so the wave keeps
-   the same aspect ratio it had with the original `height: 90vh` setup —
-   the container's `overflow: hidden` clips the parts that overflow. */
-.iframe-mask-container iframe {
+/* The canvas is intentionally taller than the mask (0 to 90vh of the
+   viewport) so the wave keeps its original framing; the mask clips the
+   parts that overflow. */
+.field {
   position: absolute;
   top: calc(-1 * var(--line-inset));
   left: 0;
@@ -243,7 +244,6 @@ body {
   height: 90vh;
   height: 90dvh;
   display: block;
-  border: 0;
 }
 
 /* --------------------------------------------------------------------------
@@ -272,10 +272,6 @@ body {
   font-size: calc(var(--index) * 0.65);
   font-weight: 1000;
   z-index: 10;
-}
-
-.controls > div {
-  cursor: pointer;
 }
 
 /* Row's bottom edge sits --line-gap above the top line. (100% - --line-inset
@@ -341,13 +337,17 @@ body {
   scrollbar-width: none;
   opacity: 0;
   pointer-events: none;
+  /* Hidden (out of the tab order and accessibility tree) once faded out. */
+  visibility: hidden;
   z-index: 9;
-  transition: opacity 0.4s ease;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
 }
 
 .scroller-container.show {
   opacity: 1;
   pointer-events: auto;
+  visibility: visible;
+  transition: opacity 0.4s ease;
 }
 
 .scroller-container::-webkit-scrollbar {
@@ -362,6 +362,8 @@ body {
 }
 
 .scroller-content .project-title {
+  display: block;
+  width: 100%;
   font-family: "SpaceMono", monospace;
   font-size: calc(var(--i) * 2);
   line-height: 1.05;
@@ -403,12 +405,16 @@ body {
   z-index: 8;
   transform: translateX(100%);
   padding: 17vh 3vw 2vh 4vw;
-  transition: transform 0.8s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+  /* Hidden (out of the tab order and accessibility tree) once slid out. */
+  visibility: hidden;
+  transition: transform 0.8s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease, visibility 0s linear 0.8s;
 }
 
 .about-panel.show {
   transform: translateX(0);
   font-weight: 900;
+  visibility: visible;
+  transition: transform 0.8s ease, background 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 
 .about-content {
