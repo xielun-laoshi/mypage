@@ -6,20 +6,43 @@ This is the sourcecode for my personal website.
 
 | File | Role |
 |---|---|
-| `index.html` | Page markup: header/footer controls, contact + project detail panels |
-| `main.css` | All page styling; layout anchors live in the `:root` tokens (`--line-inset`, `--line-gap`, `--edge-gap`, `--btn-gap`) |
-| `main.js` | Project list data (`PROJECTS`) + rendering, panel/theme interactions, scroller boundary opacity, custom cursor |
-| `trial.html` | Embedded iframe: GLSL shaders + host page for the particle-wave background |
-| `script.js` | Three.js scene inside the iframe (renders the wave, follows the page theme) |
-| `style.css` | Iframe-local styles (full-bleed canvas, no scrollbars) |
-| `three.min.js`, `spark1.png` | Vendored Three.js r86 and the particle sprite (no third-party requests) |
+| `index.html` | Markup: masthead, axes, the field's band, contact panel, one `<article>` per project, footer |
+| `css/main.css` | All styling: tokens (palette, type scale, layout anchors like `--line`), the frame, index, panels, motion, responsive and reduced-motion rules |
+| `js/main.js` | Entry point: hash routing between views, panel transitions, the intro, field framing per view, probe readout, theme sweep |
+| `js/field.js` | The particle field: GLSL shaders + a small WebGL renderer (no libraries) |
+| `js/cursor.js` | The elastic, theme-inverting cursor lens |
+| `js/text.js` | The typewriter: text types itself in, a key at a time, on one clock locked to the display's frames |
+| `fonts/` | Self-hosted subset fonts, their licenses, and `build.py`, which produced them |
 
-To add or edit a project: add an entry to `PROJECTS` in `main.js` and a matching
-`<div class="about-panel project-panel" id="...">` panel in `index.html`.
+## Views
+
+The page is one screen with four views, each linkable:
+
+| URL | View |
+|---|---|
+| `/` | Home: the field as a landscape |
+| `/#/projects` | The project index (the field becomes a texture) |
+| `/#/projects/<slug>` | A project's panel, e.g. `/#/projects/ann` |
+| `/#/contact` | Contact (the field calms) |
+
+Back/forward and Escape move between them; ← / → page through projects. On
+touch screens, hold a finger on the field to probe it.
+
+To add or edit a project, edit its `<article class="panel project" id="project-…">`
+in `index.html`: `data-title` / `data-meta` are its index row (meta parts are
+separated by ` - `), the article body is its panel, and the slug is the id
+without `project-`. Index order follows document order.
+
+## Font
+
+One typewriter voice throughout: [Lekton](https://github.com/google/fonts/tree/main/ofl/lekton),
+drawn after Olivetti typewriter faces at ISIA Urbino (SIL OFL 1.1). Regular and
+Bold are subset to Latin by `fonts/build.py`.
 
 ## Run locally
 
-Any static server works, e.g.:
+The scripts are ES modules, so open the site through any static server
+(not `file://`), e.g.:
 
 ```
 npx http-server -p 4173 -c-1 .
