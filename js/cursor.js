@@ -52,8 +52,9 @@ export function startCursor(el) {
   document.addEventListener("pointerover", (e) => {
     const target = e.target instanceof Element ? e.target : null;
     const hit = target && target.closest("[data-cursor], a, button");
-    state = !hit ? "idle" : hit.dataset.cursor || "link";
-    el.dataset.state = state;
+    const next = !hit ? "idle" : hit.dataset.cursor || "link";
+    if (next === state) return;
+    state = next;
     wake();
   });
 

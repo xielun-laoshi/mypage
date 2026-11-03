@@ -66,7 +66,8 @@ function buildIndex() {
         <span class="row-title"></span>
         <span class="row-meta"></span>
       </a>`;
-    $(".row-title", row).textContent = p.title;
+    p.rowTitle = $(".row-title", row);
+    p.rowTitle.textContent = p.title;
     $(".row-meta", row).textContent = p.meta.join("  /  ");
     p.row = row;
     p.link = $(".row-link", row);
@@ -122,6 +123,7 @@ function buildPanels() {
 let state = { base: "home", overlay: null };
 let trigger = null;   // the link that opened the current overlay
 let hovered = null;   // project under the pointer / keyboard focus in the list
+const navLinks = $$(".nav [data-action]");
 
 function parse() {
   const [section, slug] = location.hash.replace(/^#\/?/, "").split("/");
@@ -163,10 +165,18 @@ document.addEventListener("click", (e) => {
   navigate(targetOf(link.dataset.action, link.dataset.slug));
 });
 
+// Escape steps back out; ← / → page through projects while one is open.
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape" || body.classList.contains("intro")) return;
-  if (state.overlay) navigate({ base: state.base, overlay: null });
-  else if (state.base === "projects") navigate({ base: "home", overlay: null });
+  if (body.classList.contains("intro") || e.altKey || e.ctrlKey || e.metaKey) return;
+  const project = bySlug.get(state.overlay);
+  if (e.key === "Escape") {
+    if (state.overlay) navigate({ base: state.base, overlay: null });
+    else if (state.base === "projects") navigate({ base: "home", overlay: null });
+  } else if (project && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
+    e.preventDefault();
+    const step = e.key === "ArrowRight" ? 1 : -1;
+    navigate({ base: "projects", overlay: projects[(project.index + step + projects.length) % projects.length].slug });
+  }
 });
 
 addEventListener("popstate", () => render(parse()));
@@ -177,7 +187,7 @@ function render(next) {
   body.dataset.view = next.base;
   body.dataset.overlay = next.overlay === "contact" ? "contact" : next.overlay ? "project" : "";
 
-  for (const link of $$(".nav [data-action]")) {
+  for (const link of navLinks) {
     const on = link.dataset.action === "projects" ? next.base === "projects" : next.overlay === "contact";
     if (on) link.setAttribute("aria-current", "page"); else link.removeAttribute("aria-current");
   }
@@ -188,13 +198,14 @@ function render(next) {
 
   swapPanels(prev.overlay, next.overlay);
   if (next.base === "projects" && prev.base !== "projects") {
-    requestAnimationFrame(refreshBands);
     // The list prints itself, row by row.
-    for (const p of projects) typeIn($(".row-title", p.row), { delay: 60 + p.index * 70, speed: 7, still });
+    for (const p of projects) typeIn(p.rowTitle, { delay: 60 + p.index * 70, speed: 7, still });
   }
   updateField();
+  updateSheet();
 
   const project = bySlug.get(next.overlay);
+  if (project) requestAnimationFrame(() => revealRow(project));
   document.title = project ? `${project.title} — Sheron Yang`
     : next.overlay === "contact" ? "Contact — Sheron Yang"
     : next.base === "projects" ? "Projects — Sheron Yang" : "Sheron Yang";
@@ -202,39 +213,74 @@ function render(next) {
 
 const panelOf = (overlay) => (overlay === "contact" ? contactPanel : bySlug.get(overlay)?.el ?? null);
 
+// Panels open at the top. Only those scrolled away from it are reset
+// (scrolling forces a layout).
+const scrolled = new Set();
+for (const scroller of $$(".panel-scroll")) {
+  scroller.addEventListener("scroll", () => { if (scroller.scrollTop > 0) scrolled.add(scroller); }, { passive: true });
+}
+
+/* A panel leaves the way the next one arrives: project to project they
+   cross-fade in place (.is-swap), otherwise they slide. The arriving panel
+   is always on top (see .panel.is-open). */
 function swapPanels(fromKey, toKey) {
   const from = panelOf(fromKey);
   const to = panelOf(toKey);
   if (from === to) return;
   const focusInside = from && from.contains(document.activeElement);
-
-  // Project to project: cross-fade in place instead of sliding out and in.
-  const swap = from?.classList.contains("project") && to?.classList.contains("project");
-  for (const el of [from, to]) if (el) el.classList.toggle("is-swap", !!swap);
+  const swap = !!(from?.classList.contains("project") && to?.classList.contains("project"));
+  if (from) {
+    from.classList.toggle("is-swap", swap);
+    from.classList.remove("is-open");
+    if (focusInside && !to) (trigger?.isConnected ? trigger : $(".nav a")).focus({ preventScroll: true });
+  }
   if (to) {
-    to.getBoundingClientRect(); // commit the start state before opening
-    $(".panel-scroll", to)?.scrollTo(0, 0);
+    arriveBy(to, swap);
+    const scroller = $(".panel-scroll", to);
+    if (scrolled.delete(scroller)) scroller.scrollTo(0, 0);
     to.classList.add("is-open");
     typeOut(to);
     if (!body.classList.contains("intro")) $("h2", to).focus({ preventScroll: true });
   }
-  if (from) {
-    from.classList.remove("is-open");
-    setTimeout(() => from.classList.remove("is-swap"), 700);
-    if (focusInside && !to) (trigger?.isConnected ? trigger : $(".nav a")).focus({ preventScroll: true });
-  }
-  if (to && swap) setTimeout(() => to.classList.remove("is-swap"), 700);
 }
 
-/** A panel's typed parts: a project's heading and then its spec lines; the
-    contact links one after another. */
+/** Sets how a closed panel will arrive. Out of sight, it moves to that
+    start (in place and transparent, or beside the screen) at once; a panel
+    still on its way out keeps its course, so it turns around from wherever
+    it is instead of jumping. */
+function arriveBy(panel, swap) {
+  if (panel.classList.contains("is-swap") === swap) return;
+  const unseen = getComputedStyle(panel).visibility === "hidden";
+  if (unseen) panel.style.transition = "none";
+  panel.classList.toggle("is-swap", swap);
+  if (unseen) {
+    panel.getBoundingClientRect(); // commit the start state before opening
+    panel.style.transition = "";
+  }
+}
+
+/** A panel's typed parts: a project's heading, then its spec lines (their
+    hairlines appear as the first key lands), with the body arriving as the
+    heading is done; the contact links one after another, each row arriving
+    as its link starts to type, then the source line. */
 function typeOut(panel) {
   if (panel === contactPanel) {
-    $$(".contact-list a", panel).forEach((link, i) => typeIn(link, { delay: 300 + i * 160, speed: 30, still }));
+    const rows = $$(".contact-list li", panel);
+    rows.forEach((row, i) => {
+      const delay = 300 + i * 160;
+      row.style.setProperty("--delay", `${delay}ms`);
+      typeIn($("a", row), { delay, speed: 30, still });
+    });
+    $(".source", panel).style.setProperty("--delay", `${300 + rows.length * 160}ms`);
     return;
   }
   const heading = typeIn($("h2", panel), { delay: 220, speed: 9, still });
-  typeIn($(".panel-meta", panel), { delay: heading + 80, speed: 8, still });
+  const meta = $(".panel-meta", panel);
+  meta.style.setProperty("--delay", `${heading + 60}ms`);
+  typeIn(meta, { delay: heading + 60, speed: 8, still });
+  $$(".panel-body > :not(h2, .panel-meta)", panel).forEach((block, i) => {
+    block.style.setProperty("--delay", `${heading + i * 80}ms`);
+  });
 }
 
 /* --------------------------------------------------------------------------
@@ -242,13 +288,20 @@ function typeOut(panel) {
    -------------------------------------------------------------------------- */
 const status = $(".status");
 
-function updateField() {
-  const scene = sceneOf(state);
-  const signal = bySlug.get(state.overlay) || (state.base === "projects" ? hovered : null);
+/** The field's framing for a view (with the project previewed in the list,
+    if any), and the project whose signature it shows. */
+function framingOf(view, preview = null) {
+  const scene = sceneOf(view);
+  const signal = bySlug.get(view.overlay) || (view.base === "projects" ? preview : null);
   let { opacity } = SCENES[scene];
-  if (scene === "projects" && signal) opacity = 0.75;                // previewing a signature
-  if (scene === "contact" && state.base === "projects") opacity = 0.18; // keep the list legible
-  field.set({ ...SCENES[scene], opacity, seed: signal ? signal.seed : AMBIENT });
+  if (scene === "projects" && signal) opacity = 0.75;                 // previewing a signature
+  if (scene === "contact" && view.base === "projects") opacity = 0.18; // keep the list legible
+  return { scene, signal, framing: { ...SCENES[scene], opacity, seed: signal ? signal.seed : AMBIENT } };
+}
+
+function updateField() {
+  const { scene, signal, framing } = framingOf(state, hovered);
+  field.set(framing);
 
   const label = signal ? `SIGNAL ${pad(signal.index + 1)}`
     : scene === "contact" ? "SIGNAL QUIET" : scene === "home" ? "SIGNAL AMBIENT" : "SIGNAL INDEX";
@@ -260,12 +313,20 @@ function updateField() {
   }
 }
 
+// Between rows the preview clears, after a beat so that moving from one row
+// to the next doesn't flicker back to the index.
 const list = $(".index-list");
+let gapTimer = 0;
 list.addEventListener("pointerover", (e) => {
   const link = e.target.closest(".row-link");
+  clearTimeout(gapTimer);
   if (link) previewProject(bySlug.get(link.dataset.slug));
+  else gapTimer = setTimeout(() => previewProject(null), 140);
 });
-list.addEventListener("pointerleave", () => previewProject(null));
+list.addEventListener("pointerleave", () => {
+  clearTimeout(gapTimer);
+  previewProject(null);
+});
 list.addEventListener("focusin", (e) => previewProject(bySlug.get(e.target.closest(".row-link")?.dataset.slug)));
 list.addEventListener("focusout", (e) => { if (!list.contains(e.relatedTarget)) previewProject(null); });
 
@@ -277,36 +338,71 @@ function previewProject(project) {
 }
 
 /* --------------------------------------------------------------------------
-   Probe: the pointer lifts the field, carets ride the two axes, and the
-   readout reports where the pointer is and the surface height under it.
-   Clicking the field sends a ripple through it.
+   Probe: the pointer (or a finger held on the field) lifts the surface,
+   carets ride the two axes, and the readout reports where it is and the
+   surface height under it. Clicking or tapping sends a ripple through it.
    -------------------------------------------------------------------------- */
 const band = $(".band");
-const readout = $(".readout");
+const readout = $(".readout").firstChild; // its text
 const carets = $$(".caret");
-let bandRect = band.getBoundingClientRect();
-new ResizeObserver(() => (bandRect = band.getBoundingClientRect())).observe(band);
 
-let probe = null;       // last mouse position
+// Geometry is measured when it changes (never per frame): the band, and
+// the width every panel shares.
+let bandRect = band.getBoundingClientRect();
+let panelWidth = 0;
+const measure = new ResizeObserver(() => {
+  bandRect = band.getBoundingClientRect();
+  panelWidth = contactPanel.offsetWidth;
+});
+measure.observe(band);
+measure.observe(contactPanel);
+
+let probe = null;       // last probing position
+let touchId = null;     // the finger probing the field, if any
 let probeFrame = 0;
 let probeShown = 0;     // last readout update time
+let caretX = null;      // where the carets were last put
 
-addEventListener("pointermove", (e) => {
-  if (e.pointerType === "touch") return;
+const startProbe = (e) => {
   probe = { x: e.clientX, y: e.clientY };
   if (!probeFrame) probeFrame = requestAnimationFrame(updateProbe);
-}, { passive: true });
-document.documentElement.addEventListener("mouseleave", () => {
+};
+
+function endProbe() {
   probe = null;
   field.pointer(0, 0, false);
   body.classList.remove("is-probing");
+}
+
+addEventListener("pointermove", (e) => {
+  if (e.pointerType !== "touch" || e.pointerId === touchId) startProbe(e);
+}, { passive: true });
+document.documentElement.addEventListener("mouseleave", endProbe);
+
+// Fingers only probe from the field itself (the list and panels scroll).
+addEventListener("pointerdown", (e) => {
+  const touch = e.pointerType === "touch";
+  if (e.button !== 0 || e.target.closest("a, button, .panel") || !overField(e.clientX, e.clientY)) return;
+  if (touch && !e.target.closest(".band, .about")) return;
+  field.ripple(e.clientX - bandRect.left, e.clientY - bandRect.top);
+  if (touch && touchId === null) {
+    touchId = e.pointerId;
+    startProbe(e);
+  }
 });
 
-/** Is (x, y) over open field (inside the band, not under a panel)? */
+const lift = (e) => {
+  if (e.pointerId !== touchId) return;
+  touchId = null;
+  endProbe();
+};
+addEventListener("pointerup", lift);
+addEventListener("pointercancel", lift);
+
+/** Is (x, y) over open field (inside the band, not where a panel is open)? */
 function overField(x, y) {
   if (x < bandRect.left || x > bandRect.right || y < bandRect.top || y > bandRect.bottom) return false;
-  const panel = panelOf(state.overlay);
-  return !panel || x < panel.getBoundingClientRect().left;
+  return !state.overlay || x < bandRect.right - panelWidth;
 }
 
 function updateProbe(now) {
@@ -317,56 +413,58 @@ function updateProbe(now) {
   const y = probe.y - bandRect.top;
   field.pointer(x, y, inside);
   body.classList.toggle("is-probing", inside);
-  for (const caret of carets) caret.style.transform = `translateX(${probe.x}px)`;
+  if (probe.x !== caretX) {
+    caretX = probe.x;
+    for (const caret of carets) caret.style.transform = `translateX(${caretX}px)`;
+  }
   if (!inside) return;
   // The surface keeps moving under a still pointer, so keep sampling.
   if (now - probeShown > 70) {
     probeShown = now;
     const surface = field.sample(x, y);
     const z = surface ? `${surface.height < 0 ? "−" : "+"}${Math.abs(surface.height).toFixed(2).padStart(5, "0")}` : "——.——";
-    readout.textContent = `X ${(x / bandRect.width).toFixed(3)}   Y ${(1 - y / bandRect.height).toFixed(3)}   Z ${z}`;
+    readout.data = `X ${(x / bandRect.width).toFixed(3)}   Y ${(1 - y / bandRect.height).toFixed(3)}   Z ${z}`;
   }
   probeFrame = requestAnimationFrame(updateProbe);
 }
 
-addEventListener("pointerdown", (e) => {
-  if (e.button !== 0 || e.target.closest("a, button, .panel") || !overField(e.clientX, e.clientY)) return;
-  field.ripple(e.clientX - bandRect.left, e.clientY - bandRect.top);
-});
-
 /* --------------------------------------------------------------------------
-   Index rows are fully opaque only while their center sits between the two
-   lines; past a line they snap (never fade) to a low opacity, so rows stay
-   visible beyond the band instead of being clipped.
+   The list keeps the open project's row inside the band (rows past the axes
+   are ghosted by a CSS mask on .index).
    -------------------------------------------------------------------------- */
 const index = $(".index");
-const OUT_OF_BAND_OPACITY = "0.15"; // set to "0" to hide rows entirely
 
-function refreshBands() {
-  const topY = bandRect.top;
-  const bottomY = bandRect.bottom;
-  for (const p of projects) {
-    const rect = p.row.getBoundingClientRect();
-    const center = rect.top + rect.height / 2;
-    const desired = center >= topY && center <= bottomY ? "" : OUT_OF_BAND_OPACITY;
-    if (p.row.style.opacity !== desired) p.row.style.opacity = desired;
-  }
+function revealRow(project) {
+  const r = project.row.getBoundingClientRect();
+  if (r.top >= bandRect.top && r.bottom <= bandRect.bottom) return;
+  const offset = r.top + r.height / 2 - (bandRect.top + bandRect.height / 2);
+  index.scrollBy({ top: offset, behavior: still ? "auto" : "smooth" });
 }
 
-let bandsQueued = false;
-const queueBands = () => {
-  if (bandsQueued) return;
-  bandsQueued = true;
-  requestAnimationFrame(() => { bandsQueued = false; refreshBands(); });
-};
-index.addEventListener("scroll", queueBands, { passive: true });
-addEventListener("resize", queueBands);
+/* --------------------------------------------------------------------------
+   On small screens panels are full-screen sheets: while one is open, the
+   page behind it is inert (out of the tab order and the accessibility tree)
+   and the field, covered, stops drawing until the sheet lowers.
+   -------------------------------------------------------------------------- */
+const sheetMedia = matchMedia("(max-width: 720px), (max-width: 1100px) and (orientation: portrait)");
+const behindSheet = [$(".masthead"), $(".footer"), index, $(".about")];
+let pauseTimer = 0;
+
+function updateSheet() {
+  const covered = sheetMedia.matches && !!state.overlay;
+  for (const el of behindSheet) el.inert = covered;
+  clearTimeout(pauseTimer);
+  if (covered) pauseTimer = setTimeout(() => field.pause(true), 1100); // once the sheet is up
+  else field.pause(false);
+}
+sheetMedia.addEventListener("change", updateSheet);
 
 /* --------------------------------------------------------------------------
    Theme: the new palette sweeps up from the bottom line (View Transitions),
-   or switches instantly where unsupported or motion is reduced.
+   or cross-fades where unsupported (instant when motion is reduced).
    -------------------------------------------------------------------------- */
-for (const button of $$("[data-theme-set]")) {
+const themeButtons = $$("[data-theme-set]");
+for (const button of themeButtons) {
   button.addEventListener("click", () => setTheme(button.dataset.themeSet));
 }
 
@@ -375,12 +473,19 @@ function setTheme(theme) {
   const apply = () => {
     body.dataset.theme = theme;
     field.setTheme(theme);
-    for (const b of $$("[data-theme-set]")) b.setAttribute("aria-pressed", String(b.dataset.themeSet === theme));
+    for (const b of themeButtons) b.setAttribute("aria-pressed", String(b.dataset.themeSet === theme));
     $('meta[name="theme-color"]').content = theme === "dark" ? "#121212" : "#ededed";
   };
   if (still || !document.startViewTransition) return apply();
   body.classList.add("is-sweeping");
-  document.startViewTransition(apply).finished.finally(() => body.classList.remove("is-sweeping"));
+  document.startViewTransition(() => {
+    // The sweep reveals the new palette whole: nothing on the page eases
+    // into its new colors (hover fades would otherwise start everywhere).
+    body.classList.add("is-retheming");
+    apply();
+    getComputedStyle(body).color; // switch every color now, transitions off
+    body.classList.remove("is-retheming");
+  }).finished.finally(() => body.classList.remove("is-sweeping"));
 }
 
 /* --------------------------------------------------------------------------
@@ -400,19 +505,24 @@ async function intro() {
     return;
   }
 
-  let skipped = false;
   const listening = new AbortController();
-  for (const type of ["pointerdown", "keydown", "wheel", "touchstart"]) {
-    addEventListener(type, () => (skipped = true), { passive: true, signal: listening.signal });
-  }
-  const pause = async (ms) => { const end = performance.now() + ms; while (!skipped && performance.now() < end) await wait(30); };
+  const skipped = new Promise((resolve) => {
+    for (const type of ["pointerdown", "keydown", "wheel", "touchstart"]) {
+      addEventListener(type, resolve, { passive: true, signal: listening.signal });
+    }
+  });
+  const pause = (ms) => Promise.race([wait(ms), skipped]);
 
   await Promise.race([Promise.all([document.fonts.ready, field.ready]), wait(1600)]);
   body.classList.add("intro-draw");
   field.set({ opacity: 1 }); // the plane, edge-on: a single line of points
   await pause(650);
   body.classList.add("intro-open");
-  field.set(SCENES[sceneOf(route)]);
+  // The landscape rises on the lines' clock, landing as they land. (Asking
+  // for the animations starts them now, so the lines part even when a skip
+  // ends the intro in this same task.)
+  const parting = $(".axis-top").getAnimations?.().find((a) => a.transitionProperty === "translate");
+  field.set(framingOf(route).framing, { along: parting });
   await pause(560);
   listening.abort();
   finish();

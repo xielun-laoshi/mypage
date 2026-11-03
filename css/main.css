@@ -85,8 +85,14 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
+  overscroll-behavior: none; /* no pull-to-refresh or bounce on phones */
   background: var(--bg);
   color: var(--ink);
+}
+
+html {
+  -webkit-text-size-adjust: 100%; /* iOS would inflate text in landscape */
+  text-size-adjust: 100%;
 }
 
 body {
@@ -147,10 +153,34 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 /* Typed spec lines (sentence case), like "Eau de Parfum / 50 ml". */
-.row-meta, .panel-meta, .panel-link, .contact-list span, .source {
+.row-meta, .panel-meta, .panel-link, .contact-list li > span, .source {
   font-size: var(--fs-spec);
   line-height: 1.6;
   letter-spacing: 0.02em;
+}
+
+/* The frame's labels sit on paper, so project rows ghosting past the axes
+   pass behind them instead of through them. */
+.name a, .nav a, .theme button, .status {
+  --chip-y: 0.25em;
+  --chip-x: 0.5em;
+  padding: var(--chip-y) var(--chip-x);
+  margin: calc(-1 * var(--chip-y)) calc(-1 * var(--chip-x));
+  background: var(--bg);
+}
+
+/* Touch screens: every control's target is at least 24px tall (the padding
+   grows; the text stays where it is). */
+@media (pointer: coarse) {
+  .nav a, .theme button, .panel-close, .panel-steps a {
+    --chip-y: 6px;
+    padding-top: var(--chip-y);
+    padding-bottom: var(--chip-y);
+    margin-top: calc(-1 * var(--chip-y));
+    margin-bottom: calc(-1 * var(--chip-y));
+  }
+  .name a { --chip-y: 4px; }
+  .panel-link, .source a { padding: 3px 0; margin: -3px 0; }
 }
 
 /* --------------------------------------------------------------------------
@@ -208,7 +238,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
 .nav a::before, .theme button::before {
   content: "";
   position: absolute;
-  left: -1.15em;
+  left: calc(var(--chip-x) - 1.15em); /* measured from the text, not the chip */
   top: 50%;
   width: 0.5em;
   height: 0.5em;
@@ -294,6 +324,9 @@ a, button { -webkit-tap-highlight-color: transparent; }
   overflow: hidden;
 }
 
+/* A finger drags across the field to probe it (pinch zoom still works). */
+.band, .about { touch-action: pinch-zoom; }
+
 .field {
   display: block;
   width: 100%;
@@ -306,10 +339,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
   position: fixed;
   z-index: 6;
   left: var(--edge);
-  bottom: calc(var(--line) + var(--gap));
+  bottom: calc(1.02*(var(--line) + var(--gap)));
   max-width: min(48ch, 100vw - 2 * var(--edge)); /* 46 characters + tracking */
-  font: 400 var(--fs-about) / 1.65 var(--type);
-  letter-spacing: 0.01em;
+  font: 400 var(--fs-about) / 1.45 var(--type);
+  letter-spacing: 0.005em;
   text-wrap: balance;
   transition: opacity 0.7s var(--ease-out) 0.25s, transform 1s var(--ease-out) 0.25s, visibility 0s;
 }
@@ -353,41 +386,43 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 /* --------------------------------------------------------------------------
-   Typing (js/text.js typeIn): every character is wrapped in .ch, and each
-   one is struck in after the one before it, like keys.
+   Typing (js/text.js typeIn): while an element types itself in, each
+   character is a key, hidden until it is struck. Keys are custom elements
+   (<type-key>), so no rule written for the page's spans can restyle them.
    -------------------------------------------------------------------------- */
 
-.is-typing .ch {
-  visibility: hidden;
-  animation: strike 1ms steps(1) forwards;
-  animation-delay: calc(var(--type-delay, 0ms) + var(--n) * var(--type-speed, 12ms));
-}
-
-@keyframes strike {
-  to { visibility: visible; }
-}
+type-key { visibility: hidden; }
+type-key.is-struck { visibility: inherit; }
 
 /* --------------------------------------------------------------------------
    Project index
    -------------------------------------------------------------------------- */
 
+/* The list scrolls from anywhere on the page; its text keeps to the left of
+   where a panel opens. Rows are in full ink between the axes and ghost at
+   15% beyond them (hard stops: they never fade). Set --ghost to 0 to hide
+   rows outside the band entirely. */
 .index {
+  --ghost: 0.15;
   position: fixed;
   z-index: 5;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: calc(100vw - var(--panel-w));
+  inset: 0;
   padding: calc(var(--line) + clamp(28px, 7vh, 72px)) 2vw calc(var(--line) + 30vh) var(--edge);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(rgb(0 0 0 / var(--ghost)) var(--line), #000 var(--line),
+    #000 calc(100% - var(--line)), rgb(0 0 0 / var(--ghost)) calc(100% - var(--line)));
+  mask-image: linear-gradient(rgb(0 0 0 / var(--ghost)) var(--line), #000 var(--line),
+    #000 calc(100% - var(--line)), rgb(0 0 0 / var(--ghost)) calc(100% - var(--line)));
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.35s ease, visibility 0s 0.35s;
 }
 
 .index::-webkit-scrollbar { display: none; }
+
+.index-list { max-width: calc(100vw - var(--panel-w) - var(--edge) - 2vw); }
 
 [data-view="projects"] .index {
   opacity: 1;
@@ -410,16 +445,19 @@ a, button { -webkit-tap-highlight-color: transparent; }
   white-space: nowrap;
 }
 
-/* A short rule grows out of the number toward the active/hovered title. */
+/* A short rule grows out of the number toward the active/hovered title
+   (scaled, not resized, so it animates without relayout). */
 .row-no::after {
   content: "";
   display: inline-block;
-  width: 0;
+  width: 1.6em;
   height: 1px;
   margin-left: 0.6em;
   vertical-align: 0.3em;
   background: currentColor;
-  transition: width 0.6s var(--ease-out);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.6s var(--ease-out);
 }
 
 .row-title {
@@ -448,14 +486,16 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 .row.is-active .row-title { transform: translateX(0.35em); }
-.row.is-active .row-no::after { width: 1.6em; }
+.row.is-active .row-no::after { transform: none; }
 .row.is-active .row-no { color: var(--ink); }
-[data-overlay="project"] .row:not(.is-active) .row-link { opacity: 0.32; }
+/* With a project open the other rows recede, but not the one under the
+   pointer: hovering lights a row the same way before and after. */
+[data-overlay="project"] .row:not(.is-active) .row-link:not(:hover) { opacity: 0.32; }
 
 @media (hover: hover) {
   .index-list.has-hover .row-link:not(:hover) { opacity: 0.32; }
   .row-link:hover .row-title { transform: translateX(0.35em); }
-  .row-link:hover .row-no::after { width: 1.6em; }
+  .row-link:hover .row-no::after { transform: none; }
   .row-link:hover .row-no, .row-link:hover .row-meta { color: var(--ink); }
 }
 
@@ -478,7 +518,9 @@ a, button { -webkit-tap-highlight-color: transparent; }
   transition: transform 0.85s var(--ease-in-out), visibility 0s 0.85s;
 }
 
+/* The arriving panel passes over the leaving one. */
 .panel.is-open {
+  z-index: 21;
   transform: none;
   visibility: visible;
   transition: transform 1.05s var(--ease-out);
@@ -543,7 +585,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .panel h2 { outline: none; } /* focused programmatically when a panel opens */
 
-/* The specs, stacked between hairlines like the typed lines on a label. */
+/* The specs, stacked between hairlines like the typed lines on a label;
+   the rules appear as the specs start typing (--delay, set by js/main.js). */
 .panel-meta {
   margin-top: 1.4em;
   padding: 0.8em 0;
@@ -551,6 +594,12 @@ a, button { -webkit-tap-highlight-color: transparent; }
   border-bottom: 1px solid var(--ink-3);
   white-space: pre-line;
   color: var(--ink-2);
+}
+
+.panel.is-open .panel-meta { animation: rule-in 0.4s ease var(--delay, 0s) backwards; }
+
+@keyframes rule-in {
+  from { border-color: transparent; }
 }
 
 .panel-body > p:not(.panel-meta) {
@@ -574,7 +623,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 /* Panel content arrives in sequence once the sheet is moving; the heading
-   and specs type themselves in (js/main.js). */
+   and specs type themselves in, and js/main.js sets the --delay of what
+   follows them (and of the contact rows, each with its typed link). */
 .panel-top, .panel-steps, .panel-body > :not(h2, .panel-meta, .contact-list), .contact-list li {
   opacity: 0;
   transform: translateY(10px);
@@ -588,23 +638,17 @@ a, button { -webkit-tap-highlight-color: transparent; }
 }
 
 .panel-top { --delay: 0.3s; }
-.panel-body > p:nth-of-type(2) { --delay: 0.5s; }
-.panel-body > p:nth-of-type(3) { --delay: 0.58s; }
 .panel-steps { --delay: 0.66s; }
 
 /* Contact */
 .contact-list li + li { margin-top: clamp(18px, 3.4vh, 34px); }
-.contact-list li:nth-child(1) { --delay: 0.3s; }
-.contact-list li:nth-child(2) { --delay: 0.38s; }
-.contact-list li:nth-child(3) { --delay: 0.46s; }
-.panel-body > .source { --delay: 0.56s; }
 
 .contact-list a {
   display: inline-block;
   font: 400 clamp(1.8rem, 1rem + 2.2vw, 3.2rem) / 1.15 var(--type);
 }
 
-.contact-list span {
+.contact-list li > span {
   display: block;
   margin-top: 0.5em;
   color: var(--ink-2);
@@ -618,6 +662,8 @@ a, button { -webkit-tap-highlight-color: transparent; }
   margin-top: clamp(40px, 9vh, 96px);
   color: var(--ink-2);
 }
+
+.source, .panel-body > p:has(> .panel-link) { text-wrap: balance; }
 
 /* --------------------------------------------------------------------------
    Cursor: a lens that inverts what is under it (js/cursor.js moves it)
@@ -652,38 +698,53 @@ a, button { -webkit-tap-highlight-color: transparent; }
    the band opens between them; the type arrives last.
    -------------------------------------------------------------------------- */
 
-.intro .axis-top    { transform: translateY(calc(var(--mid) - var(--line))) scaleX(0); }
-.intro .axis-bottom { transform: translateY(calc(var(--line) - var(--mid))) scaleX(0); }
-.intro .band { clip-path: inset(calc(50% - 1px) 0); }
+/* The line draws out (scale) and the axes part (translate) as separate
+   transitions, so the parting starts fresh, on the same frame as the
+   shutters below. */
+.intro .axis-top    { translate: 0 calc(var(--mid) - var(--line)); scale: 0 1; }
+.intro .axis-bottom { translate: 0 calc(var(--line) - var(--mid)); scale: 0 1; }
 
-.intro-draw .axis-top {
-  transform: translateY(calc(var(--mid) - var(--line))) scaleX(1);
-  transition: transform 0.8s var(--ease-out);
+.intro-draw :is(.axis-top, .axis-bottom) {
+  scale: none;
+  transition: scale 0.8s var(--ease-out);
 }
 
-.intro-draw .axis-bottom {
-  transform: translateY(calc(var(--line) - var(--mid))) scaleX(1);
-  transition: transform 0.8s var(--ease-out);
+.intro-open :is(.axis-top, .axis-bottom) {
+  translate: none;
+  transition: scale 0.8s var(--ease-out), translate 1.2s var(--ease-in-out);
 }
 
-.intro-open .axis-top,
-.intro-open .axis-bottom {
-  transform: none;
-  transition: transform 1.2s var(--ease-in-out);
+/* The band opens behind two shutters, halves of paper that part with the
+   axes: transforms on the axes' curve and clock, so the opening keeps to
+   the lines in every frame (js/main.js times the field's rise by the same
+   clock). Open, they rest just outside the band, which clips them. */
+.band::before, .band::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: calc(50% - 1px);
+  background: var(--bg);
 }
 
-.intro-open .band {
-  clip-path: inset(0);
-  transition: clip-path 1.2s var(--ease-in-out);
-}
+.band::before { top: 0; transform: translateY(-100%); }
+.band::after  { bottom: 0; transform: translateY(100%); }
+
+.intro .band::before, .intro .band::after { transform: none; }
+
+.intro-open .band::before { transform: translateY(-100%); }
+.intro-open .band::after  { transform: translateY(100%); }
+.intro-open .band::before, .intro-open .band::after { transition: transform 1.2s var(--ease-in-out); }
 
 .intro .name { visibility: hidden; } /* typed in as the intro ends */
 
-.nav, .footer > *, .readout {
+/* (The footer's controls are named, not `.footer > *`: a class change on
+   <body> then restyles just them, not the whole page.) */
+.nav, .status, .theme, .readout {
   transition: opacity 1s var(--ease-out) 0.35s, transform 1.2s var(--ease-out) 0.35s, color 0.4s ease;
 }
 
-.intro :is(.nav, .footer > *, .readout, .about) {
+.intro :is(.nav, .status, .theme, .readout, .about) {
   opacity: 0;
   transform: translateY(8px);
 }
@@ -707,12 +768,20 @@ a, button { -webkit-tap-highlight-color: transparent; }
   to   { clip-path: inset(0); }
 }
 
+/* For the instant the palette switches (js/main.js setTheme). */
+.is-retheming *, .is-retheming *::before, .is-retheming *::after { transition: none !important; }
+
 /* --------------------------------------------------------------------------
    Touch screens have no hovering pointer to probe with.
    -------------------------------------------------------------------------- */
 
+/* Touch screens show the readout and carets only while a finger probes. */
 @media (hover: none) {
-  .readout, .caret { display: none; }
+  .readout {
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+  .is-probing .readout { opacity: 1; }
 }
 
 /* --------------------------------------------------------------------------
@@ -723,13 +792,16 @@ a, button { -webkit-tap-highlight-color: transparent; }
 @media (max-width: 720px), (max-width: 1100px) and (orientation: portrait) {
   :root { --panel-w: 100vw; }
 
-  .index { width: 100vw; padding-right: var(--edge); }
+  .index { padding-right: var(--edge); }
+  .index-list { max-width: none; }
 
   .panel {
     z-index: 50;
     border-left: 0;
     transform: translateY(100%);
   }
+
+  .panel.is-open { z-index: 51; }
 
   .panel-top, .panel-steps { left: var(--edge); right: var(--edge); justify-content: space-between; }
   .panel-top { bottom: auto; top: calc(var(--line) - var(--gap) - 1.4em); }
@@ -748,17 +820,22 @@ a, button { -webkit-tap-highlight-color: transparent; }
   .nav, .theme {
     flex-direction: column;
     align-items: flex-end;
-    gap: 0.7em;
+    gap: max(0.7em, 12px); /* room for the 24px touch targets */
   }
 
   .theme { flex-direction: column-reverse; }
 
-  .nav a::before, .theme button::before { left: auto; right: -1.1em; }
+  .nav a::before, .theme button::before { left: auto; right: calc(var(--chip-x) - 1.1em); }
 
   .status { display: none; }
 
   .row-link { grid-template-columns: 2.9em 1fr; }
   .row-no::after { display: none; }
+}
+
+/* The narrowest phones: the caption still sets as four lines. */
+@media (max-width: 359px) {
+  :root { --fs-about: 12px; }
 }
 
 /* --------------------------------------------------------------------------
@@ -770,5 +847,6 @@ a, button { -webkit-tap-highlight-color: transparent; }
     transition-duration: 0s !important;
     transition-delay: 0s !important;
     animation-duration: 0s !important;
+    animation-delay: 0s !important;
   }
 }

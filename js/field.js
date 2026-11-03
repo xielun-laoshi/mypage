@@ -23,6 +23,7 @@ const SHOTS = {
   texture:   { elevation: 89.3, distance: 800, target: 0,   fov: 15 },
   calm:      { elevation: 42,   distance: 700, target: 0,   fov: 18 },
 };
+const CAMERA_KEYS = Object.keys(SHOTS.line);
 
 /* How fast each property chases its target (1/s, exponential approach). */
 const RATE = { camera: 1.9, amplitude: 2.2, opacity: 3.2, seed: 1.6, pointer: 9, strength: 4 };
@@ -166,7 +167,8 @@ void main() {
 `;
 
 /** Starts the field on `canvas`. Returns a controller; `ready` resolves
-    after the first frame has been drawn (or right away without WebGL). */
+    once the first frame has been through the GPU, so whatever it builds on
+    first use is built before anything moves (right away without WebGL). */
 export function createField(canvas, { theme = "dark", still = false, dense = true } = {}) {
   const gl = canvas && canvas.getContext("webgl", {
     alpha: true,
@@ -176,7 +178,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     stencil: false,
   });
   const noop = () => {};
-  if (!gl) return { ready: Promise.resolve(), set: noop, setTheme: noop, pointer: noop, ripple: noop, sample: () => null, stats: () => null };
+  if (!gl) return { ready: Promise.resolve(), pause: noop, set: noop, setTheme: noop, pointer: noop, ripple: noop, sample: () => null, stats: () => null };
 
   // Bands wider than 2.6:1 (ultrawide screens) see more of the plane's
   // sides; `spread` widens it to match, adding columns to keep the density.
@@ -205,10 +207,13 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   let color = INK[theme] || INK.dark;
   let size = { w: 1, h: 1, dpr: 1 };
   let matrices = null;
+  let glide = null; // { from, along }: keeping an animation's clock (see set)
+  let resting = false; // nothing moves but the wave
   let time = 7.3;   // wave time (starts mid-swell)
   let clock = 0;    // real seconds since start
   let last = 0;
   let frames = 0;
+  let warming = 2;  // frames to wait after the first draw before `ready`
 
   /* --- GL resources, rebuilt if the context is lost and restored. */
   let u = null;          // uniform locations, once the program has linked
@@ -219,16 +224,16 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
     uploadGrid();
     gl.enableVertexAttribArray(0);
-    gl.vertexAttribPointer(0, 2, gl.UNSIGNED_SHORT, false, 0, 0);
+    gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // premultiplied output
     gl.clearColor(0, 0, 0, 0);
     pending = compile(gl, VERTEX_SHADER, FRAGMENT_SHADER);
   }
 
-  /** One vertex per grid point: (column, row) as unsigned shorts. */
+  /** One vertex per grid point: (column, row). */
   function uploadGrid() {
-    const cells = new Uint16Array(count * 2);
+    const cells = new Float32Array(count * 2);
     for (let row = 0, o = 0; row <= grid.rows; row++) {
       for (let col = 0; col <= grid.cols; col++) { cells[o++] = col; cells[o++] = row; }
     }
@@ -331,40 +336,90 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.drawArrays(gl.POINTS, 0, count);
     frames++;
-    if (frames === 1) firstFrame();
     return true;
   }
 
   // Exponential approach: frame-rate independent.
   const approach = (from, to, rate, dt) => from + (to - from) * (1 - Math.exp(-rate * dt));
+  const near = (a, b, within) => Math.abs(a - b) <= within;
 
+  /** Moves every property toward its goal; returns whether anything but
+      the wave is still moving (a glide, the pointer's lift, a ripple). */
   function step(dt) {
-    let moved = false;
-    for (const key of ["elevation", "distance", "target", "fov"]) {
-      const next = approach(camera[key], goal.camera[key], RATE.camera, dt);
-      if (Math.abs(next - camera[key]) > 1e-4) { camera[key] = next; moved = true; }
-      else camera[key] = goal.camera[key];
+    let moving = false;
+    // In step with an animation, on its clock: each property sets off as
+    // fast as it otherwise would (its RATE) and lands as the animation ends.
+    const timing = glide && glide.along.effect?.getComputedTiming();
+    if (timing?.localTime != null && timing.activeDuration > 0) {
+      const x = Math.min(timing.localTime / timing.activeDuration, 1);
+      const seconds = timing.activeDuration / 1000;
+      const at = (from, to, rate) => to + (from - to) * (1 - x) ** (rate * seconds);
+      const { from } = glide;
+      for (const key of CAMERA_KEYS) camera[key] = at(from.camera[key], goal.camera[key], RATE.camera);
+      now.amplitude = at(from.amplitude, goal.amplitude, RATE.amplitude);
+      now.opacity = at(from.opacity, goal.opacity, RATE.opacity);
+      now.seed[0] = at(from.seed[0], goal.seed[0], RATE.seed);
+      now.seed[1] = at(from.seed[1], goal.seed[1], RATE.seed);
+      matrices = null;
+      moving = true;
+      if (x === 1) glide = null;
+    } else {
+      glide = null; // over, or cut short: any remainder eases in from here
+      let changed = false;
+      for (const key of CAMERA_KEYS) {
+        const next = approach(camera[key], goal.camera[key], RATE.camera, dt);
+        if (Math.abs(next - camera[key]) > 1e-4) { camera[key] = next; changed = true; }
+        else camera[key] = goal.camera[key];
+        // The last tenth of a degree (or unit) drifts too slowly to need
+        // every frame.
+        moving ||= !near(camera[key], goal.camera[key], 0.1);
+      }
+      if (changed) matrices = null;
+      now.amplitude = approach(now.amplitude, goal.amplitude, RATE.amplitude, dt);
+      now.opacity = approach(now.opacity, goal.opacity, RATE.opacity, dt);
+      now.seed[0] = approach(now.seed[0], goal.seed[0], RATE.seed, dt);
+      now.seed[1] = approach(now.seed[1], goal.seed[1], RATE.seed, dt);
+      moving ||= !near(now.amplitude, goal.amplitude, 0.005) || !near(now.opacity, goal.opacity, 0.005)
+        || !near(now.seed[0], goal.seed[0], 0.005) || !near(now.seed[1], goal.seed[1], 0.005);
     }
-    if (moved) matrices = null;
-    now.amplitude = approach(now.amplitude, goal.amplitude, RATE.amplitude, dt);
-    now.opacity = approach(now.opacity, goal.opacity, RATE.opacity, dt);
-    now.seed[0] = approach(now.seed[0], goal.seed[0], RATE.seed, dt);
-    now.seed[1] = approach(now.seed[1], goal.seed[1], RATE.seed, dt);
     pointer.x = approach(pointer.x, pointer.tx, RATE.pointer, dt);
     pointer.y = approach(pointer.y, pointer.ty, RATE.pointer, dt);
     pointer.strength = approach(pointer.strength, pointer.target, RATE.strength, dt);
+    moving ||= !near(pointer.strength, pointer.target, 0.01)
+      || (pointer.strength > 0.01 && !(near(pointer.x, pointer.tx, 0.5) && near(pointer.y, pointer.ty, 0.5)));
+    for (let i = 0; i < RIPPLES && !moving; i++) {
+      const age = clock - ripples[i * 4 + 2];
+      moving = ripples[i * 4 + 3] > 0 && age >= 0 && age < 3.2;
+    }
+    return moving;
+  }
+
+  // While anything moves, draw every frame, in step with the page's own
+  // animations; at rest the wave is slow enough to draw at most ~105 times
+  // a second (every other frame on 120 / 144 Hz screens, half the GPU work).
+  const MIN_FRAME = 1 / 105;
+
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    requestAnimationFrame(frame);
   }
 
   function frame(t) {
-    if (broken) return;
-    requestAnimationFrame(frame);
+    scheduled = false;
+    if (broken || paused) return; // the loop stops until resumed
+    schedule();
     if (lost) return;
-    const dt = last ? Math.min((t - last) / 1000, 0.1) : 1 / 60;
+    // A couple of frames after the first draw, the GPU has run it.
+    if (frames && warming && --warming === 0) firstFrame();
+    const elapsed = last ? (t - last) / 1000 : 1 / 60;
+    if (resting && elapsed < MIN_FRAME) return;
+    const dt = Math.min(elapsed, 0.1);
     last = t;
     if (!still) {
       clock += dt;
       time += dt * WAVE_SPEED;
-      step(dt);
+      resting = !step(dt);
       watchFrameRate(dt);
     }
     // Nothing to show: skip the draw (e.g. behind a full-screen sheet).
@@ -388,6 +443,8 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   let dirty = true;
   let lost = false;
   let broken = false;
+  let paused = false;
+  let scheduled = false;
   const ready = new Promise((resolve) => (firstFrame = resolve));
 
   canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); lost = true; });
@@ -395,36 +452,59 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   init();
   resize();
   new ResizeObserver(resize).observe(canvas);
-  requestAnimationFrame(frame);
+  schedule();
 
   return {
     ready,
 
-    /** Glide toward a framing. Any of shot / amplitude / opacity / seed. */
-    set({ shot, amplitude, opacity, seed } = {}) {
+    /** Stops drawing (e.g. while something opaque covers the field); the
+        wave picks up where it left off when resumed. */
+    pause(on) {
+      if (paused === on) return;
+      paused = on;
+      if (!on) {
+        last = 0;
+        schedule();
+      }
+    },
+
+    /** Glide toward a framing: any of shot / amplitude / opacity / seed.
+        Each property eases in at its own rate; `along` a running animation
+        (a Web Animation, e.g. a CSS transition) the glide keeps that
+        animation's clock instead, arriving exactly as it ends. A later call
+        that changes the framing takes over from wherever it is. */
+    set({ shot, amplitude, opacity, seed } = {}, { along } = {}) {
+      const before = JSON.stringify(goal);
       if (shot) goal.camera = { ...SHOTS[shot] };
       if (amplitude !== undefined) goal.amplitude = amplitude;
       if (opacity !== undefined) goal.opacity = opacity;
       if (seed) goal.seed = [...seed];
+      resting = false;
       if (still) settle();
+      else if (along) glide = { along, from: { camera: { ...camera }, amplitude: now.amplitude, opacity: now.opacity, seed: [...now.seed] } };
+      else if (JSON.stringify(goal) !== before) glide = null;
     },
 
     setTheme(name) {
       color = INK[name] || INK.dark;
       dirty = true;
+      resting = false;
     },
 
     /** Pointer position in canvas CSS px; `active` false lets the lift fade. */
     pointer(x, y, active) {
+      const target = active && !still ? 1 : 0;
+      if (x !== pointer.tx || y !== pointer.ty || target !== pointer.target) resting = false;
       if (pointer.target === 0 && active) { pointer.x = x; pointer.y = y; }
       pointer.tx = x;
       pointer.ty = y;
-      pointer.target = active && !still ? 1 : 0;
+      pointer.target = target;
     },
 
     ripple(x, y) {
       if (still) return;
       ripples.set([x, y, clock, 1], (rippleNext++ % RIPPLES) * 4);
+      resting = false;
     },
 
     /** The surface under a canvas point: its plane position { x, y } (world
