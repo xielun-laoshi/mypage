@@ -532,7 +532,10 @@ function preview(entry) {
 
 /* The band makes way for the row under the pointer, as it does for the
    caption (js/clearing.js): its number, its title and its specs stand
-   clear of the signature it previews, which plays around them. */
+   clear of the signature it previews, which plays around them. And where
+   the pointer itself is on the row, the surface it lifts gathers against
+   the row's words (`gather`: see GATHER in js/ascii.js), so the band goes
+   on answering the pointer there instead of going blank under it. */
 const rowWords = new Map(); // project or post -> its row's words, from the first time it is pointed at
 let cleared = null;         // the one whose row the band has made way for
 let settled = 0;
@@ -545,7 +548,7 @@ function clearRow(entry) {
   if (!cleared) return;
   if (!rowWords.has(cleared)) {
     // (Its arrow is not text: it is set down as a mark, after the number.)
-    rowWords.set(cleared, clearing.add(cleared.link, { marks: { ".row-no": `${pad(cleared.index + 1)} ->` } }));
+    rowWords.set(cleared, clearing.add(cleared.link, { marks: { ".row-no": `${pad(cleared.index + 1)} ->` }, gather: true }));
   }
   rowWords.get(cleared).show();
   // The title steps over a character once its arrow has typed (main.css):
@@ -906,12 +909,50 @@ const reading = clearing.add($(".readout"));
 
 let captioned = false; // the caption is on the page (typed in, or on its way)
 
+/* The caption's cursor blinks while it waits: half a second after the
+   caption has typed in, then 0.55 s in sight and 0.55 s out. On a timer,
+   which changes the page twice a period: as a CSS animation it had the
+   browser work out the page's styles again on every frame, in sight or
+   not, on every view. Where it stands in its period is read off the
+   clock each time, so a timer that comes late (a hidden tab) skips ahead
+   instead of catching up. Not with reduced motion: the cursor is steady
+   (asked each time, as it was of the animation: it stops the moment
+   motion is turned down, and goes on when it is turned up again). */
+const BLINK = { wait: 500, half: 550 };
+const calm = matchMedia("(prefers-reduced-motion: reduce)");
+let blinkFrom = null; // when the cursor's first period starts (page time), while it waits
+let blinkTimer = 0;
+
+function blinkOn() {
+  clearTimeout(blinkTimer);
+  if (blinkFrom === null || document.hidden) return;
+  if (calm.matches) {
+    aboutCursor.classList.remove("is-out");
+    return;
+  }
+  const since = performance.now() - blinkFrom;
+  const halves = since < 0 ? 0 : Math.floor(since / BLINK.half);
+  aboutCursor.classList.toggle("is-out", halves % 2 === 1);
+  blinkTimer = setTimeout(blinkOn, Math.max(1, (halves + 1) * BLINK.half - since));
+}
+
+/** Has the cursor blink from `from` ms from now (the moment the caption
+    has typed in), or not at all (null). */
+function blink(from) {
+  blinkFrom = from === null ? null : performance.now() + from + BLINK.wait;
+  aboutCursor.classList.remove("is-out");
+  blinkOn();
+}
+document.addEventListener("visibilitychange", blinkOn);
+calm.addEventListener("change", blinkOn);
+
 /** Types the caption in, `delay` ms from now; its clearing opens with it
     (and, until then, for the cursor that waits where it will start). */
 function typeCaption(delay) {
   captioned = true;
   const end = typeIn(about, { delay, speed: 9, still });
   caption.show({ delay, over: end - delay, cursor: true });
+  blink(end);
 }
 
 /** Strikes the caption out, from its end, and the band closes over where
@@ -919,6 +960,7 @@ function typeCaption(delay) {
 function strikeCaption() {
   if (!captioned) return;
   captioned = false;
+  blink(null);
   if (typing(about)) {
     cut(about);
     caption.hide();

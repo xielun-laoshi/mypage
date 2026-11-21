@@ -26,6 +26,23 @@ const PAD = Math.ceil(OUTER) + 2;
 const LEAD = 90;
 const LAG = 50;
 
+/* How far a face rises from its baseline to the top of its line of type
+   and to the top of its capitals (px). Measured once for each family,
+   weight and style, as shares of the size: the first size met stands for
+   the others (a row is set in four sizes of one face). */
+const RISES = new Map();
+function risesOf(ctx, type) {
+  const face = type.font.replace(/ [\d.]+px /, " ");
+  let shares = RISES.get(face);
+  if (!shares) {
+    ctx.font = type.font;
+    const metrics = ctx.measureText("xH");
+    shares = [(metrics.fontBoundingBoxAscent ?? type.size * 0.8) / type.size, (metrics.actualBoundingBoxAscent || type.size * 0.66) / type.size];
+    RISES.set(face, shares);
+  }
+  return [shares[0] * type.size, shares[1] * type.size];
+}
+
 const DIAGONAL = Math.SQRT2;
 const smoothstep = (a, b, v) => {
   const t = Math.min(Math.max((v - a) / (b - a), 0), 1);
@@ -33,14 +50,20 @@ const smoothstep = (a, b, v) => {
 };
 
 /** Keeps the clearings of the words that lie over `band` (the element the
-    screen's grid is laid in). `apply(goal, { settle })` takes what comes of
-    it: how far each cell of the grid should make way (0–255, a byte per
-    cell, the top row first), to get there by degrees, or at once with
-    `settle`. With `still` (reduced motion) nothing sweeps. Returns
+    screen's grid is laid in). `apply(goal, { settle, gather })` takes what
+    comes of it: how far each cell of the grid should make way (0–255, a
+    byte per cell, the top row first), to get there by degrees, or at once
+    with `settle`; and, a byte per cell likewise, whether the words a cell
+    makes way for are ones the band gathers at (see add). With `still`
+    (reduced motion) nothing sweeps. Returns
       setGrid(layout)   the screen's grid (layout in js/ascii.js; null: none)
-      add(el, { marks }) words that lie over the band; `marks` maps a
-                        selector to the character its matches show (a
-                        cursor's, say, which is not text). Returns
+      add(el, { marks, gather }) words that lie over the band; `marks` maps
+                        a selector to the character its matches show (a
+                        cursor's, say, which is not text). With `gather`,
+                        the band gathers at these words where the pointer
+                        is on them, instead of only making way (a list's
+                        row: see GATHER in js/ascii.js): about them, not
+                        in among them (see among). Returns
                           show({ delay, over, cursor })  they are there:
                                 typed in over `over` ms, `delay` ms from
                                 now (the clearing opens along them; with
@@ -58,6 +81,7 @@ export function createClearing({ band, apply, still = false }) {
   let grid = null;   // the screen's
   let rect = null;   // the band's, px
   let goal = null;   // each cell's
+  let gathers = null; // each cell's: whether the words it makes way for are ones the band gathers at (see add)
   let frame = 0;
   let last = "";     // what was last applied, in brief (see update)
 
@@ -206,17 +230,71 @@ export function createClearing({ band, apply, still = false }) {
         turns.push(Math.max(whose, 0) / span);
       }
     }
-    word.stamp = { cells, amounts, turns };
+    // Where the band gathers at the words (see add), it does so about
+    // them, never in among them: such a cell is `inner` (see among), and
+    // only makes way, as it always did. (Worked out here, after the loops
+    // above and apart from them: they are what this function costs, and
+    // are left exactly as they run for every other word.)
+    const inner = word.gather
+      ? among(glyphs, ctx, cells, { cols: grid.cols, c0, c1, r0, r1, toCol: (x) => (x - ox - gx) / cw, toRow: (y) => (y - oy - gy) / ch })
+      : null;
+    word.stamp = { cells, amounts, turns, inner };
+  }
+
+  /** Of a stamp's cells (each its place in the grid, `cols` to a row; all
+      within c0–c1 by r0–r1), those whose middles lie in among the letters:
+      in a line of them, from its first letter to its last and from the
+      capitals' top to the baseline, or between two lines of one piece of
+      text. A byte for each of the cells. So a wide space in a title (after
+      a colon, say) is as clear as the narrow ones, which the letters
+      either side of them keep clear anyway. (`toCol`, `toRow`: a place on
+      the page, counted in cells of the grid. The lines are marked as they
+      are met, and each cell is then looked up, not worked out: this runs
+      seldom, and so never warm.) */
+  function among(glyphs, ctx, cells, { cols, c0, c1, r0, r1, toCol, toRow }) {
+    const across = c1 - c0 + 1;
+    const marks = new Uint8Array(Math.max(across, 0) * Math.max(r1 - r0 + 1, 0));
+    const mark = (left, right, top, bottom) => {
+      const ca = Math.max(c0, Math.ceil(toCol(left) - 0.5)), cb = Math.min(c1, Math.floor(toCol(right) - 0.5));
+      const ra = Math.max(r0, Math.ceil(toRow(top) - 0.5)), rb = Math.min(r1, Math.floor(toRow(bottom) - 0.5));
+      if (cb < ca) return;
+      for (let r = ra; r <= rb; r++) marks.fill(1, (r - r0) * across + ca - c0, (r - r0) * across + cb - c0 + 1);
+    };
+    let line = null, last = null; // the line being gone along, and the one before it
+    const close = () => {
+      if (!line) return;
+      mark(line.left, line.right, line.top, line.bottom);
+      if (last && last.type === line.type && line.top > last.bottom) mark(Math.max(last.left, line.left), Math.min(last.right, line.right), last.bottom, line.top);
+      last = line;
+    };
+    for (const { box, type } of glyphs) {
+      if (line && line.type === type && Math.abs(line.at - box.top) < 1) {
+        if (box.left < line.left) line.left = box.left;
+        if (box.right > line.right) line.right = box.right;
+        continue;
+      }
+      close();
+      const [ascent, capitals] = risesOf(ctx, type);
+      line = { type, at: box.top, left: box.left, right: box.right, top: box.top + ascent - capitals, bottom: box.top + ascent };
+    }
+    close();
+    const inner = new Uint8Array(cells.length);
+    for (let k = 0; k < cells.length; k++) {
+      const r = Math.floor(cells[k] / cols), c = cells[k] - r * cols;
+      inner[k] = marks[(r - r0) * across + c - c0];
+    }
+    return inner;
   }
 
   /** Every cell's goal just now; returns whether a clearing is still
       opening or closing. */
   function compose(now) {
     goal.fill(0);
+    gathers.fill(0);
     let moving = false;
     let brief = "";
     for (const word of words) {
-      const { stamp, sweep } = word;
+      const { stamp, sweep, gather } = word;
       // How far along its words the clearing is open: past them all, not
       // at all, or as far as the keys have come (or are still to go).
       let front = word.shown ? 2 : -1;
@@ -232,11 +310,14 @@ export function createClearing({ band, apply, still = false }) {
       }
       let open = 0;
       if (stamp && front >= 0) {
-        const { cells, amounts, turns } = stamp;
+        const { cells, amounts, turns, inner } = stamp;
         for (let k = 0; k < cells.length; k++) {
           if (turns[k] > front) continue;
           open++;
-          if (amounts[k] > goal[cells[k]]) goal[cells[k]] = amounts[k];
+          if (amounts[k] > goal[cells[k]]) {
+            goal[cells[k]] = amounts[k];
+            gathers[cells[k]] = gather && !inner?.[k] ? 1 : 0; // (the cell is its words' who claim most of it; in among them nothing gathers)
+          }
         }
       }
       brief += `${open},`;
@@ -261,7 +342,7 @@ export function createClearing({ band, apply, still = false }) {
       ({ moving, brief } = compose(performance.now()));
       last = "";
     }
-    if (settle || brief !== last) apply(goal, { settle: settle || still });
+    if (settle || brief !== last) apply(goal, { settle: settle || still, gather: gathers });
     last = brief;
     if (moving) frame = requestAnimationFrame(() => update());
   }
@@ -279,12 +360,13 @@ export function createClearing({ band, apply, still = false }) {
     setGrid(layout) {
       grid = layout;
       goal = layout ? new Uint8Array(layout.cols * layout.rows) : null;
+      gathers = layout ? new Uint8Array(layout.cols * layout.rows) : null;
       last = "";
       refresh();
     },
 
-    add(el, { marks = {} } = {}) {
-      const word = { el, marks, stamp: null, shown: false, sweep: null, stale: false };
+    add(el, { marks = {}, gather = false } = {}) {
+      const word = { el, marks, gather: gather ? 1 : 0, stamp: null, shown: false, sweep: null, stale: false };
       words.push(word);
       const turn = (shown, opening, { delay = 0, over = 0, cursor = false }) => {
         word.shown = shown;

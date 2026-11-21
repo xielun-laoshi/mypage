@@ -434,17 +434,21 @@ export function createBackground(container, { canvas, theme = "dark", still = fa
     },
 
     /** Has the typed band make way for words set over it: how far each
-        cell of the screen's grid should (see setWay in js/ascii.js). */
+        cell of the screen's grid should, and at which of them it gathers
+        about the pointer instead (see setWay in js/ascii.js). */
     clear(goal, how) {
       if (typed) screen.setWay(goal, how);
     },
 
-    /** Pointer position in canvas CSS px; `active` false lets it go. */
+    /** Pointer position in canvas CSS px; `active` false lets it go. (The
+        typed screen is told too: where the pointer is on a list's row,
+        the picture gathers at the row's words. See GATHER in js/ascii.js.) */
     pointer(x, y, active) {
       Object.assign(pointer, { x, y, active });
       for (const entry of built.values()) {
         if (seen(entry)) entry.layer.setPointer(x, y, active);
       }
+      if (typed) screen.setPointer(x, y, active);
     },
 
     ripple(x, y) {

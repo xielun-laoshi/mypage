@@ -12,9 +12,9 @@ This is the sourcecode for my personal website.
 | `js/field.js` | The particle field: GLSL shaders + a small WebGL renderer (no libraries) |
 | `js/background.js` | Mode preference, lazy loading, first-frame crossfades, visibility and teardown |
 | `js/ascii.js` | The typed screen: sets whichever background is showing in Lekton characters, and mixes two of them cell by cell while they change |
-| `js/frame.js` | The frame typed to match: the rulers on the axes and their carets on the band's grid, the panels' typed edge, the name lettered in the band's characters, and the frame's moves as stairs a character at a time |
+| `js/frame.js` | The frame typed to match: the rulers on the axes and their carets on the band's grid, the panels' typed edge, the name lettered in the band's characters, and the frame's moves as stairs a character at a time; and the band's own height, a whole count of rows that reaches from ruler to ruler |
 | `js/wave.js` | The waves typed over the page, drawn by the GPU: a panel's place filling with the band's characters cell by cell, the wave that takes a panel as it passes, and a change of theme turning the whole page over from the switch |
-| `js/clearing.js` | Where the band's characters make way for the words set over it (the caption, the readout, the row pointed at): every cell's distance from the letters' own ink |
+| `js/clearing.js` | Where the band's characters make way for the words set over it (the caption, the readout, the row pointed at): every cell's distance from the letters' own ink, and which words the band gathers at where the pointer is on them (a list's row) |
 | `js/stage.js` | WebGL 2 lifecycle and framing helpers, loaded only with an alternate background |
 | `js/slats.js`, `js/topography.js` | Plain-JS ports of React Bits Micro Slats and Topography |
 | `js/cursor.js` | The elastic cursor: a ring typed in characters on the page's grid |
@@ -78,6 +78,20 @@ lines, so that each runs as a trail of characters. If the screen can't run
 (no WebGL, or it fails), the backgrounds' canvases are shown and
 cross-fade instead; `TYPED` in `js/background.js` turns the typing off.
 
+The band is whole rows of its grid: as many as cover the space between
+the two lines (`--line` from the top and the bottom of the window), an odd
+count, so that one row runs through the middle. Its first row therefore
+starts a little above the top line and its last ends a little below the
+bottom one (a row at the most), and the rulers are typed on the rows next
+to those: the band's characters stand directly against both rulers, a row
+apart like any two rows inside it, at every size of window and every
+pixel ratio (`rowsBetween` in `js/frame.js`, `--ov-top` and `--ov-bottom`
+in `css/main.css`). The band's box used to stop at the two lines and cut
+its first and last rows short; in a window where most of a row was cut
+off, a strip of blank paper deeper than a row lay between each ruler and
+the band. Its canvas is exactly those rows in the screen's own pixels, so
+nothing is cut and nothing is stretched.
+
 A typed picture has no edge. Where its light sinks below the lightest
 character's, its points go on, in fewer and fewer of the cells and struck
 fainter, until none is left. Each cell has its turn, in an order spread
@@ -122,6 +136,23 @@ behind them when they are struck out; the cells get there by degrees,
 giving way quickly and coming back slowly. Under the project list the
 band stays an even texture, and only the row pointed at stands clear of
 the signature it previews.
+
+On that row the band goes on answering the pointer. A row's words are two
+close lines of large type: making way for them left no cell free where
+the pointer was, so the surface it lifts went blank under it, and the
+band seemed to stop the moment the pointer came onto a title. Now, within
+about 110 px of the pointer, the picture gathers against the row's words
+instead of giving way to them: only the cells at the letters' ink stay
+empty, its points run on up to those, and what is brighter than a point
+is struck up to three times as bright (never past full), most at the
+ink. It gathers about the words, never in among them: between a line's
+first letter and its last, and between two lines of a title, the band
+only makes way, as it did (`among` in `js/clearing.js`), so a wide space
+in a title is as clear as a narrow one. So what the pointer lifts wells
+up along the upper and lower edges of the title and goes along it with
+the pointer; away from the pointer the row is cleared as before (`GATHER`
+in `js/ascii.js`; rows of the two lists only: about the caption on home,
+where the band is struck at full strength, the same crowded the words).
 
 The frame around the band is typed to match it (`js/frame.js`), on the
 band's own grid and in its type (9 px Lekton, a character to a cell). The
@@ -338,6 +369,59 @@ job, a component in the middle of Markdown. A module can import whatever
 it needs, a library from a CDN included: a React component, for one, is
 rendered into the stage with `createRoot(stage).render(…)` and unmounted
 in the cleanup.
+
+## Keeping it light
+
+What the page costs while it is open is the band's animation, and little
+else. What keeps that down, and what to keep in mind when changing it:
+
+- **Frames.** A background at rest draws at most about 105 times a second
+  (every other frame on a 120 Hz screen); the typed screen draws every
+  frame, since each cell's light follows its picture gradually. Hidden
+  tabs draw nothing, and neither does the band while a sheet covers it.
+- **Points.** Waves draws only the rows of its plane that can be in sight
+  (`rowsInSight` in `js/field.js`). Seen from above, under the lists and
+  the panels, that is about half of them; on home all of them can be, and
+  all are drawn. The picture is the same point for point: the rule rests
+  on the most the surface can rise or sink (`WAVE_MOST`), so change the
+  wave's shader and that bound together. Which rows is worked out when
+  what it rests on changes, not on every frame; the pointer's lift and a
+  ripple change by a hair a frame for seconds, so their share of the
+  bound is rounded up to half a unit, and the answer stands meanwhile.
+- **Scrolling a post.** On a screen between 1 and 1.5 device px to a CSS
+  px (Windows at 125%, say) the browser, left to itself, scrolls a
+  post's sheet on the main thread, and paints and rasters the whole sheet
+  again at every step. There the sheet's scroller is given
+  `will-change: scroll-position` (the `Blog` block of `css/main.css`),
+  which moves the scrolling to the compositor: some 30 frames lost in a
+  slow scroll through the first post became 6 (a fast fling loses what it
+  lost). It has a price that is seen: text scrolled so is smoothed in
+  grays, where without the hint the browser smooths that sheet's text in
+  grays or in colored subpixels by turns, as the window's height falls.
+  That was chosen. And the compositor sets what it scrolls on the
+  screen's pixels in its own way: at some places of a scroll a paragraph
+  or two stand one device pixel lower than they did. At 1 and under
+  the text is in subpixels at every size of window and is left as it is;
+  from 1.5 up the browser does all this by itself. Two other ways were
+  tried and dropped: an opaque background on the scroller (it keeps
+  subpixel text at 1, but lost as many frames as before there, and turned
+  gray text into subpixel text at 1.25), and the same hint on the side
+  panels (their text is short: nothing gained that could be measured).
+- **Nothing ticks for nothing.** The caption's cursor blinks on a timer
+  (`blink` in `js/main.js`), not as a CSS animation: a running animation
+  has the browser work out the page's styles again on every frame, on
+  every view, whether anything changes or not. Prefer a timer or a
+  one-shot transition for anything that changes a few times a second.
+  (A timer has to ask about reduced motion itself, and each time: the
+  stylesheet stops every animation the moment that is turned on, and the
+  cursor's timer does the same.)
+- **What runs seldom is never warm.** The clearing measures a row's words
+  once in a while, 10 to 20 ms each time (`measure` in `js/clearing.js`).
+  A new branch inside its loops, taken for a list's rows only, had the
+  browser throw its compiled loops away the first time a row was met:
+  10 ms more, in the very task a pointer or a closing post waits on. What
+  is added to such a function goes after its loops, in a function of its
+  own (`among`), and is timed where it runs, not in a loop of its own.
 
 ## Font
 

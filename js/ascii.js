@@ -133,6 +133,24 @@ const SETTLE = { bottom: [0.26, 0.3], top: [0.12, 0.5], floor: 0.085 };
    (1/s), and how fast the picture comes back once they have gone. */
 const WAY_RATE = { open: 16, close: 4.5 };
 
+/* Gathering. About the pointer, where it is on words the page has marked
+   so (a list's row: see setWay), the picture does not give way to them: it
+   gathers against them. Only the cells at the words' ink stay empty (those
+   that have made way `hold[0]` to `hold[1]` of the way: within some 9 px
+   of the ink, and thinning out to 12; and the cells in among the words,
+   between a line's first letter and its last or between two lines, are
+   not marked at all (js/clearing.js) and make way as they always did: so
+   nothing is struck in a title that could be read with it), its points
+   run on up to those, and what is brighter than a point is struck up to
+   1 + `boost` times as bright, most at the ink and no more by where a
+   cell has made way `rim` of the way. So the surface the pointer lifts,
+   which the words would otherwise blank where it is highest, wells up
+   along their upper and lower edges and goes along them with the
+   pointer. `reach`: how far from the pointer that holds (CSS px, falling
+   off as a bell does). It follows the pointer as the field's own lift
+   does (`follow`, `rise`: 1/s, RATE in js/field.js). */
+const GATHER = { reach: 110, boost: 2, rim: 0.8, hold: [0.66, 0.84], follow: 9, rise: 4 };
+
 /* The pictures: texels per CSS px (three or four to a character each way,
    which this averages), and the most that can show at once. */
 export const RATIO = 0.5;
@@ -256,7 +274,8 @@ uniform float uFaintest;
 uniform float uOpacity;          // the view's: how hard the whole screen is struck
 uniform float uContrast;         // the view's: how far the light spreads about PIVOT
 uniform sampler2D uOrder;        // g: each cell's turn as the points thin out (see THIN)
-uniform sampler2D uWay;          // r: how far each cell has made way for the page's words
+uniform sampler2D uWay;          // r: how far each cell has made way for the page's words; g: whether the picture gathers at them (see GATHER)
+uniform vec4 uNear;              // the pointer: where it is (canvas px), how strongly it is there, its reach (px)
 uniform vec3 uThin;              // THIN: from, to, soft
 uniform vec4 uSettle;            // SETTLE: rows it reaches from the bottom and the top, the weight kept at each
 
@@ -270,7 +289,17 @@ void main() {
   float kept = mix(uSettle.z, 1.0, smoothstep(0.0, uSettle.x, cell.y + 0.5))
     * mix(uSettle.w, 1.0, smoothstep(0.0, uSettle.y, uGrid.y - cell.y - 0.5));
   light = min(light, ${SETTLE.floor.toFixed(3)}) + max(light - ${SETTLE.floor.toFixed(3)}, 0.0) * kept;
-  light *= 1.0 - texture2D(uWay, here).r;
+  vec4 way = texture2D(uWay, here);
+  float made = light * (1.0 - way.r);
+  if (way.g > 0.5 && way.r > 0.0 && uNear.z > 0.0) {
+    // About the pointer, on words marked so, the light gathers at them.
+    vec2 off = uOrigin + (cell + 0.5) * uCell - uNear.xy;
+    float near = uNear.z * exp(-dot(off, off) / (uNear.w * uNear.w));
+    float gathered = min(min(light, ${SETTLE.floor.toFixed(3)}) + max(light - ${SETTLE.floor.toFixed(3)}, 0.0)
+      * (1.0 + ${GATHER.boost.toFixed(2)} * smoothstep(0.0, ${GATHER.rim.toFixed(2)}, way.r)), 1.0) * (1.0 - smoothstep(${GATHER.hold[0].toFixed(2)}, ${GATHER.hold[1].toFixed(2)}, way.r));
+    made = mix(made, gathered, near);
+  }
+  light = made;
   float index = -1.0;
   for (int i = 0; i < ${STEPS}; i++) index += step(uSteps[i], light);
   float struck = mix(uFaintest, 1.0, light);
@@ -453,6 +482,7 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
   let settleUntil = 0;       // after a change the cells go on following their light until then
   let retyping = null;       // { start, duration }: a picture re-typed (see retype)
   let way = null;            // the cells making way for words: { goal, now, data, live, count, moving, at } (see setWay)
+  const near = { x: 0, y: 0, tx: 0, ty: 0, strength: 0, target: 0, at: 0 }; // the pointer, as the picture gathers about it (see setPointer)
   let blank = null;
   let corners = null;
   let arrive;
@@ -464,7 +494,7 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
   function arm() {
     if (raf || gone) return;
     const now = performance.now();
-    const typing = !broken && !lost && (stale || now < busyUntil || now < settleUntil || !!retyping || contrast.now !== contrast.goal || !!way?.moving);
+    const typing = !broken && !lost && (stale || now < busyUntil || now < settleUntil || !!retyping || contrast.now !== contrast.goal || !!way?.moving || near.strength !== near.target);
     if (waiting.size || typing) raf = requestAnimationFrame(frame);
   }
 
@@ -495,19 +525,26 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
   /* --- The grid and the characters. */
 
   /** Sizes the canvas and lays the grid over it, with a row and a column
-      through the middle (the intro's line falls along one row) and the
-      cells cut off at the edges cut evenly. The characters are redrawn when
-      their size in px has changed. */
+      through the middle (the intro's line falls along one row). Across,
+      the cells cut off at the window's two edges are cut evenly. Down,
+      the rows are whole: the page makes the band as tall as a whole count
+      of them (js/frame.js), so that its first and last stand against the
+      rulers. (The canvas is measured as it is laid out, not in whole CSS
+      px: at a pixel ratio like 1.25 a whole count of rows is no whole
+      number of those. And a pixel either way of a whole count is still
+      that count, not two rows more with all but a sliver of each cut off.)
+      The characters are redrawn when their size in px has changed. */
   function measure() {
     if (gone) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    size = { w: Math.max(1, Math.round((canvas.clientWidth || 1) * dpr)), h: Math.max(1, Math.round((canvas.clientHeight || 1) * dpr)), dpr };
+    const box = canvas.getBoundingClientRect();
+    size = { w: Math.max(1, Math.round((box.width || 1) * dpr)), h: Math.max(1, Math.round((box.height || 1) * dpr)), dpr };
     if (canvas.width !== size.w) canvas.width = size.w;
     if (canvas.height !== size.h) canvas.height = size.h;
     const em = TYPE.size * dpr;
     cell = [Math.max(2, Math.round(em * TYPE.column)), Math.max(2, Math.round(em * TYPE.row))];
     const cols = 2 * Math.ceil((size.w / cell[0] - 1) / 2) + 1;
-    const rows = 2 * Math.ceil((size.h / cell[1] - 1) / 2) + 1;
+    const rows = 2 * Math.ceil(((size.h - 1) / cell[1] - 1) / 2) + 1;
     grid = { cols, rows, x: Math.round((size.w - cols * cell[0]) / 2), y: Math.round((size.h - rows * cell[1]) / 2) };
     stale = true;
     if (!broken && !lost) {
@@ -609,12 +646,13 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
     history = false;
     retyping = null;
     // What made way on the old grid means nothing on this one (the page
-    // says afresh: setWay); on the same grid, built again, it stands.
-    const kept = way?.goal.length === cols * rows ? way.goal : new Uint8Array(cols * rows);
-    way = {
-      goal: kept, now: new Float32Array(cols * rows), data: new Uint8Array(cols * rows * 4).fill(255),
-      live: new Int32Array(cols * rows), count: 0, moving: false, at: 0,
-    };
+    // says afresh: setWay); on the same grid, built again, it stands, and
+    // so does where the picture gathers (the texel's second byte).
+    const same = way?.goal.length === cols * rows;
+    const kept = same ? way.goal : new Uint8Array(cols * rows);
+    const data = new Uint8Array(cols * rows * 4).fill(255);
+    for (let i = 0; i < cols * rows; i++) data[i * 4 + 1] = same ? way.data[i * 4 + 1] : 0;
+    way = { goal: kept, now: new Float32Array(cols * rows), data, live: new Int32Array(cols * rows), count: 0, moving: false, at: 0 };
     part(0, true);
   }
 
@@ -787,6 +825,7 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
     const retyped = retyping ? Math.min(Math.max((clock - retyping.start) / retyping.duration, 0), 1) : 1;
     let changed = stale || glide(now) || !!retyping;
     if (part(now)) changed = true;
+    if (attend(now)) changed = true;
     if (retyped >= 1) retyping = null;
     const shown = slots.map((slot) => {
       const strength = slot.texture ? Math.min(Math.max(Number(slot.shown()) || 0, 0), 1) : 0;
@@ -822,6 +861,21 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
     contrast.lead += (contrast.goal - contrast.lead) * share;
     contrast.now += (contrast.lead - contrast.now) * share;
     if (Math.abs(contrast.goal - contrast.now) < 0.002 && Math.abs(contrast.goal - contrast.lead) < 0.002) contrast.now = contrast.lead = contrast.goal;
+    return true;
+  }
+
+  /** Moves the pointer the picture gathers about (see GATHER) toward where
+      the page says it is, at the pace the field's own lift keeps; returns
+      whether it is there at all. */
+  function attend(now) {
+    const dt = near.at ? Math.min(Math.max((now - near.at) / 1000, 0), 0.1) : 0;
+    near.at = now;
+    if (!near.strength && !near.target) return false;
+    const step = 1 - Math.exp(-GATHER.follow * dt), rise = 1 - Math.exp(-GATHER.rise * dt);
+    near.x += (near.tx - near.x) * step;
+    near.y += (near.ty - near.y) * step;
+    near.strength += (near.target - near.strength) * rise;
+    if (Math.abs(near.target - near.strength) < 0.002) near.strength = near.target;
     return true;
   }
 
@@ -878,6 +932,7 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, cells.way);
     gl.uniform1i(u.uWay, 3);
+    gl.uniform4f(u.uNear, near.x * size.dpr, size.h - near.y * size.dpr, near.strength, GATHER.reach * size.dpr);
     gl.uniform3f(u.uThin, THIN.from, THIN.to, THIN.soft);
     gl.uniform4f(u.uSettle, SETTLE.bottom[0] * grid.rows, SETTLE.top[0] * grid.rows, SETTLE.bottom[1], SETTLE.top[1]);
     gl.uniform2f(u.uGrid, grid.cols, grid.rows);
@@ -1030,13 +1085,19 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
     /** Has the cells make way for the page's words: `goal` is how far
         each should (0–255), a byte per cell, the top row first (or null:
         none). They get there by degrees (see WAY_RATE), or at once with
-        `settle`. A goal for another grid than the one laid out is left
-        (the page says again once it has the new layout). */
-    setWay(goal, { settle = false } = {}) {
+        `settle`. `gather`, a byte per cell likewise, marks the cells
+        whose words the picture gathers at where the pointer is (see
+        GATHER); a cell keeps its mark while it makes way and on its way
+        back, so that nothing changes at a stroke as its words go. A goal
+        for another grid than the one laid out is left (the page says
+        again once it has the new layout). */
+    setWay(goal, { settle = false, gather = null } = {}) {
       if (broken || lost || gone || !way) return;
       if (goal && goal.length !== way.goal.length) return;
-      if (goal) way.goal.set(goal);
-      else way.goal.fill(0);
+      if (goal) {
+        way.goal.set(goal);
+        for (let i = 0; i < goal.length; i++) if (goal[i]) way.data[i * 4 + 1] = gather?.[i] ? 255 : 0;
+      } else way.goal.fill(0);
       if (settle || still) {
         try { part(0, true); } catch (error) { return failed(error); }
       } else {
@@ -1049,6 +1110,22 @@ export function createScreen(canvas, { theme = "dark", still = false, onRestore 
         way.moving = count > 0;
       }
       stale = true;
+      arm();
+    },
+
+    /** The pointer, for the picture to gather about (see GATHER): where
+        it is on the canvas (CSS px from its top-left corner), and whether
+        it is on the band at all (if not, where it was is kept, and the
+        gathering there dies away). Not with reduced motion: nothing
+        lifts then. */
+    setPointer(x, y, active) {
+      const target = active && !still ? 1 : 0;
+      if (target) {
+        if (!near.target) { near.x = x; near.y = y; } // (as the field's lift: it rises where the pointer comes on)
+        near.tx = x;
+        near.ty = y;
+      }
+      near.target = target;
       arm();
     },
 

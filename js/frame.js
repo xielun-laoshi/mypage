@@ -146,6 +146,15 @@ export function typeFrame({ still = false } = {}) {
   const root = document.documentElement;
   const link = document.querySelector(".name a");
   const name = link ? setUpName(link) : null;
+  // The two lines' own place: --line from the top of the window and from
+  // its bottom (main.css). The band no longer marks it: it is made of whole
+  // rows, and so stands a little past both (see rowsBetween). Measured on
+  // an element of its own, out of sight, that takes no part in the page.
+  const lines = document.createElement("div");
+  lines.setAttribute("aria-hidden", "true");
+  lines.style.cssText = "position:fixed;top:var(--line);bottom:var(--line);left:0;width:0;visibility:hidden;pointer-events:none";
+  document.body.append(lines);
+
   let laidOut = null; // the screen's grid, while there is one
   let grid = estimate();
   let queued = 0;
@@ -176,20 +185,46 @@ export function typeFrame({ still = false } = {}) {
     return { label, text: label.toUpperCase(), art, final: null, late: null, cols: 0, rows: 0, run: 0, developing: false };
   }
 
-  /** The band's grid as the screen would lay it out (js/ascii.js): odd
-      counts of columns and rows, centered, the cells cut evenly at the
-      edges (origin: the first cell's corner, from the band's). */
+  /** The band's rows. It is made of whole rows of the grid: as many as
+      cover the space between the two lines, an odd count, so that one runs
+      through the middle (the intro's line falls along it), set about that
+      middle. So its first row starts a little above the top line and its
+      last ends a little below the bottom one (a row at the most each), and
+      the rulers, typed on the rows next to those, stand against the band's
+      own characters at every size of window. (The band's box used to stop
+      at the lines, cutting its first and last rows short: with most of a
+      row cut off, a strip of paper more than a row deep lay between each
+      ruler and the band.) Returns how many rows, where the first starts
+      and the last ends on the page, and how far each reaches past its line
+      (px; main.css moves the band's edges out by these: --ov-top and
+      --ov-bottom). The count and the reach are worked out as they always
+      were, from the space between the lines in whole CSS px and then in
+      the screen's px, so the rulers stand exactly where they stood. */
+  function rowsBetween() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const ch = Math.max(2, Math.round(TYPE.size * dpr * TYPE.row)); // a row, in the screen's px
+    const box = lines.getBoundingClientRect();
+    const between = Math.max(1, Math.round(Math.round(box.height || innerHeight * 0.7) * dpr));
+    const rows = 2 * Math.ceil((between / ch - 1) / 2) + 1;
+    const under = Math.round((between - rows * ch) / 2); // (the share of what is over that falls below, as GL counts: ≤ 0)
+    const over = (rows * ch + under - between) / dpr;
+    const tall = (rows * ch) / dpr;
+    const line = box.height ? box.top : innerHeight * 0.15;
+    return { rows, top: line - over, end: line - over + tall, over, below: tall - over - (box.height || innerHeight * 0.7), line };
+  }
+
+  /** The band's grid across the window, as the screen lays it out
+      (js/ascii.js): an odd count of columns, centered, the two at the
+      window's edges cut evenly (origin: the first cell's corner, from the
+      band's; its rows are whole, see rowsBetween). */
   function estimate() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const em = TYPE.size * dpr;
     const cw = Math.max(2, Math.round(em * TYPE.column));
     const ch = Math.max(2, Math.round(em * TYPE.row));
     const w = Math.round(innerWidth * dpr);
-    const h = Math.max(1, Math.round((document.querySelector(".band")?.clientHeight || innerHeight * 0.7) * dpr));
     const cols = 2 * Math.ceil((w / cw - 1) / 2) + 1;
-    const rows = 2 * Math.ceil((h / ch - 1) / 2) + 1;
-    const y = Math.round((h - rows * ch) / 2); // (from the bottom, as GL counts)
-    return { cell: [cw / dpr, ch / dpr], origin: [Math.round((w - cols * cw) / 2) / dpr, (h - y - rows * ch) / dpr], cols, rows };
+    return { cell: [cw / dpr, ch / dpr], origin: [Math.round((w - cols * cw) / 2) / dpr, 0], cols, rows: rowsBetween().rows };
   }
 
   function update() {
@@ -220,22 +255,20 @@ export function typeFrame({ still = false } = {}) {
   }
 
   /** The band's rows, carried over the whole page, so that everything typed
-      sits on one grid: the rulers on the rows just outside the band (past
-      the part of its edge rows that the band cuts off: --ov-top and
-      --ov-bottom), the cursor, and the panels' edge, typed down every row
-      as broken bars (`¦`) that cross the rulers in a `+` (--column, from
-      the row at --grid-y, the first that starts on screen or above it). */
+      sits on one grid: the band itself (its first and last rows reach past
+      the two lines by --ov-top and --ov-bottom: see rowsBetween), the
+      rulers on the rows just outside it, the cursor, and the panels' edge,
+      typed down every row as broken bars (`¦`) that cross the rulers in a
+      `+` (--column, from the row at --grid-y, the first that starts on
+      screen or above it). */
   function carry() {
     const [, ch] = grid.cell;
-    const band = document.querySelector(".band")?.getBoundingClientRect();
-    if (!band?.height) return;
-    const top = band.top + grid.origin[1]; // the first row's top (the band cuts it)
-    const end = top + grid.rows * ch;      // the last row's bottom
+    const { top, end, over, below: under } = rowsBetween(); // the first row's top, the last row's bottom
     const y0 = top - Math.ceil(top / ch) * ch;
     const above = Math.round((top - ch - y0) / ch), below = Math.round((end - y0) / ch);
     const column = Array.from({ length: Math.ceil((innerHeight - y0) / ch) + 1 }, (_, i) => (i === above || i === below ? "+" : "¦"));
-    setVar("--ov-top", `${band.top - top}px`);
-    setVar("--ov-bottom", `${end - band.bottom}px`);
+    setVar("--ov-top", `${over}px`);
+    setVar("--ov-bottom", `${under}px`);
     setVar("--grid-y", `${y0}px`);
     setVar("--column", `"${column.join("\\A ")}"`);
     // The moves made on this grid, as stairs a character high or wide: the
@@ -300,7 +333,7 @@ export function typeFrame({ still = false } = {}) {
   function fitName() {
     const [, ch] = grid.cell;
     const { left, room } = placeName();
-    const line = document.querySelector(".band")?.getBoundingClientRect().top || innerHeight * 0.15;
+    const { line } = rowsBetween(); // (the masthead's height: where the top line is)
     const most = clamp(Math.floor((line * 0.6) / ch), NAME.minRows, NAME.rows);
     const width = (rows) => { const m = measureName(rows); return m.cols * m.cell[0]; };
     let rows = most;

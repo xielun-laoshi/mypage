@@ -73,8 +73,8 @@
   --cell-h: 9px;
   --grid-x: 0px;
   --grid-y: 0px;      /* the band's rows, carried over the page: one starts here */
-  --ov-top: 0px;      /* how much of the band's edge rows its edges cut off */
-  --ov-bottom: 0px;
+  --ov-top: 0px;      /* how far the band's first row reaches above the top line, */
+  --ov-bottom: 0px;   /* and its last below the bottom one (see .band) */
   --ruler: "";
   --column: "";       /* the panels' edge, a character to a row (`¦`, `+`) */
   --typed-weight: 700;
@@ -377,11 +377,15 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .is-probing .caret { opacity: 1; }
 
+/* The band is whole rows of its grid: its first row starts a little above
+   the top line and its last ends a little below the bottom one (--ov-top,
+   --ov-bottom, a row at the most: js/frame.js works them out), so the
+   rulers, on the rows next to those, stand against its own characters. */
 .band {
   position: fixed;
   z-index: 1;
-  top: var(--line);
-  bottom: var(--line);
+  top: calc(var(--line) - var(--ov-top));
+  bottom: calc(var(--line) - var(--ov-bottom));
   left: 0;
   right: 0;
   overflow: hidden;
@@ -441,11 +445,10 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .about type-key::before { position: absolute; left: 0; }
 .about type-text .about-cursor { display: none; } /* (while it types) */
-.about-cursor::before { animation: blink 1.1s steps(1) 0.5s infinite; }
-
-@keyframes blink {
-  50% { opacity: 0; }
-}
+/* (It blinks on js/main.js's timer, in and out of sight every 0.55 s. As
+   an animation it had the browser work out the page's styles again on
+   every frame, for as long as the page was open, on every view.) */
+.about-cursor.is-out::before { opacity: 0; }
 
 .readout {
   position: fixed;
@@ -880,6 +883,26 @@ type-key.is-struck { visibility: inherit; }
   padding: 0 var(--edge); /* (the room above and below the text is the text's own: .post-body, .post-end) */
   border-top: 1px solid var(--ink);
   border-bottom: 1px solid var(--ink);
+}
+
+/* A post is long, and on a screen between 1 and 1.5 device px to a CSS px
+   (Windows at 125%, say) the browser, left to itself, scrolls its sheet
+   on the main thread: every step of a scroll paints and rasters the sheet
+   anew (some 30 frames lost in a slow scroll through this post at 1.25,
+   6 with the hint). The hint moves the scrolling to the compositor
+   there. It has one effect that is seen, and was chosen with it: text
+   scrolled so is smoothed in grays, where without it the browser smooths
+   this sheet's text in grays or in colored subpixels by turns, as the
+   window's height falls (gray at most heights; the page's typed parts are
+   gray at all of them). And the compositor sets what it scrolls on the
+   screen's pixels in its own way: at some places of a scroll a paragraph
+   stands one device pixel lower than it did (qa/README.md has the
+   measure). Not at 1 and under: there the text is in subpixels at every
+   size of window, and stays so. From 1.5 up the browser does all this by
+   itself, and the hint changes nothing. (A side panel's text is short;
+   the hint gained it nothing that could be measured, and it has none.) */
+@media (min-resolution: 1.05dppx) {
+  .post .panel-scroll { will-change: scroll-position; }
 }
 
 /* It covers the page's rulers, so it types its own (unread; where the

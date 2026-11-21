@@ -38,6 +38,26 @@ export const EASE = 1.6;
 const WAVE_SPEED = 0.42; // noise time units per second
 const RIPPLES = 4;
 
+/* Rows of the plane that cannot be in sight are not drawn (see rowsInSight):
+   seen from above, under the lists and the panels, that is about half of
+   them. What "cannot" rests on: the most the surface can rise or sink.
+   The wave is a product of two noises, each within ±NOISE_MOST (classic
+   2D Perlin noise is within ±0.7071 for gradients of length 1; these are
+   at most 0.79 long, and the result is scaled 2.3: 1.285), which the
+   shader maps to at most 2 + 32 and 2 + 27 times that, times 0.06; the
+   pointer lifts it LIFT at most and each ripple RING at its start. A row
+   counts as in sight until it lands more than SIGHT_MARGIN of the band's
+   half-height from its middle, that is 15% of a half-height past an edge
+   (a point is far smaller than that), and half a row is allowed either
+   side of it for the points' own scatter. */
+const NOISE_MOST = 1.3;
+const WAVE_MOST = 0.06 * (2 + 32 * NOISE_MOST) * (2 + 27 * NOISE_MOST);
+const LIFT = 9;
+const RING = 14;
+const RIPPLE_LIFE = 3.2;   // s
+const RIPPLE_FADE = 1.25;  // 1/s
+const SIGHT_MARGIN = 1.15;
+
 /* The ink of each theme (main.css --ink); the other backgrounds draw in it too. */
 export const INK = { dark: [0.91, 0.91, 0.91], light: [0.09, 0.09, 0.09] };
 
@@ -142,13 +162,13 @@ void main() {
   for (int i = 0; i < ${RIPPLES}; i++) {
     vec4 r = uRipples[i];
     float age = uClock - r.z;
-    if (r.w > 0.0 && age > 0.0 && age < 3.2) {
+    if (r.w > 0.0 && age > 0.0 && age < ${RIPPLE_LIFE}) {
       float front = distance(screen, r.xy) - age * 330.0;
-      ring += r.w * exp(-front * front / 1700.0) * exp(-age * 1.25);
+      ring += r.w * exp(-front * front / 1700.0) * exp(-age * ${RIPPLE_FADE});
     }
   }
 
-  float h = wave(p, uTime, uSeed) * uAmplitude + lift * 9.0 + ring * 14.0;
+  float h = wave(p, uTime, uSeed) * uAmplitude + lift * ${LIFT.toFixed(1)} + ring * ${RING.toFixed(1)};
   vec4 view = uModelView * vec4(p, h, 1.0);
   gl_Position = uProjection * view;
   float size = uSize * uPixelRatio * (uDistance / -view.z) * (1.0 + 0.4 * lift);
@@ -391,7 +411,11 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     // add); shown, they lie over one another.
     gl.blendFunc(gl.ONE, typing ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.POINTS, 0, count);
+    // Only the rows that can be in sight (the points are stored a row
+    // after another, the far edge first, so those are one run of them,
+    // in the order they always had).
+    const [first, last] = rowsInSight();
+    gl.drawArrays(gl.POINTS, first * (grid.cols + 1), (last - first + 1) * (grid.cols + 1));
     drawCount++;
     return true;
   }
@@ -452,10 +476,62 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       || (pointer.strength > 0.01 && !(near(pointer.x, pointer.tx, 0.5) && near(pointer.y, pointer.ty, 0.5)));
     for (let i = 0; i < RIPPLES && !moving; i++) {
       const age = clock - ripples[i * 4 + 2];
-      moving = ripples[i * 4 + 3] > 0 && age >= 0 && age < 3.2;
+      moving = ripples[i * 4 + 3] > 0 && age >= 0 && age < RIPPLE_LIFE;
     }
     return moving;
   }
+
+  /** The rows of the plane that can be in sight just now, as [first,
+      last] (row 0 is the far edge), for the camera as it stands and the
+      most the surface can rise or sink at this moment (see WAVE_MOST). A
+      point of the plane `s` along its depth from where the camera looks,
+      at height `h`, lands at f (h cos e + s sin e) / (D + s cos e - h sin e)
+      of the band's half-height above its middle (e: the elevation, D: the
+      distance, f: the lens). That moves one way only as `s` or `h` grows,
+      so over a row (its span of `s`, every height it can have) it is
+      furthest up and down at the four corners. A row is out of sight when
+      all four are past the same edge; anything not plainly so is drawn. */
+  function rowsInSight() {
+    const e = (camera.elevation * Math.PI) / 180;
+    const sin = Math.sin(e), cos = Math.cos(e);
+    const D = camera.distance, f = matrices.f;
+    let ring = 0;
+    for (let i = 0; i < RIPPLES; i++) {
+      const age = clock - ripples[i * 4 + 2];
+      if (ripples[i * 4 + 3] > 0 && age > -0.1 && age < RIPPLE_LIFE + 0.1) ring += ripples[i * 4 + 3] * Math.exp(-RIPPLE_FADE * Math.max(age, 0));
+    }
+    // (Rounded up to half a unit. The pointer's lift nears its full height
+    // for seconds on end, a hair a frame, and a ripple dies away as
+    // slowly: a bound that followed them would have every row looked at
+    // again on every frame. A little more is a bound still.)
+    const most = Math.ceil((WAVE_MOST * Math.abs(now.amplitude) + LIFT * Math.max(pointer.strength, 0) + RING * ring + 1) * 2) / 2;
+    // (So at rest, and under a pointer that stays on the band, nothing
+    // this rests on changes from one frame to the next: the answer stands.)
+    if (seen.e === e && seen.D === D && seen.target === camera.target && seen.f === f && seen.most === most && seen.rows === grid.rows) return sight;
+    Object.assign(seen, { e, D, target: camera.target, f, most, rows: grid.rows });
+    const span = PLANE.far - PLANE.near;
+    // Where a point lands (see above), or NaN at the camera or behind it.
+    const lands = (s, h) => {
+      const depth = D + s * cos - h * sin;
+      return depth > 1 ? (f * (h * cos + s * sin)) / depth : NaN;
+    };
+    const inSight = (row) => {
+      const far = PLANE.far - (span * (row - 0.5)) / grid.rows + camera.target;
+      const near = PLANE.far - (span * (row + 0.5)) / grid.rows + camera.target;
+      const a = lands(far, -most), b = lands(far, most), c = lands(near, -most), d = lands(near, most);
+      // (A corner that can't be placed compares false both times: in sight.)
+      return !((a > SIGHT_MARGIN && b > SIGHT_MARGIN && c > SIGHT_MARGIN && d > SIGHT_MARGIN)
+        || (a < -SIGHT_MARGIN && b < -SIGHT_MARGIN && c < -SIGHT_MARGIN && d < -SIGHT_MARGIN));
+    };
+    let first = 0, last = grid.rows;
+    while (first < last && !inSight(first)) first++;
+    while (last > first && !inSight(last)) last--;
+    sight[0] = first;
+    sight[1] = last;
+    return sight;
+  }
+  const sight = [0, 0]; // (the answer, kept: asked for every frame)
+  const seen = { e: NaN, D: 0, target: 0, f: 0, most: 0, rows: 0 }; // (and what it was worked out for)
 
   // While anything moves, draw every frame, in step with the page's own
   // animations; at rest the wave is slow enough to draw at most ~105 times
