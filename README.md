@@ -226,8 +226,10 @@ The alternate modes require WebGL 2. Slats additionally requires float
 render targets for its pointer-driven fluid; unsupported modes are removed
 from the cycle for that visit. Waves remains the default/fallback.
 
-See [the verification report and screenshots](qa/README.md) for acceptance
-results, final visual settings, resource counts, and testing limits.
+The verification report and its screenshots (acceptance results, final
+visual settings, resource counts, testing limits, and the measurements the
+comments in the code refer to as `qa/README.md`) are kept beside the code in
+`qa/`, which is not committed: GitHub Pages serves every committed file.
 
 To add or edit a project, edit its `<article class="panel project" id="project-…">`
 in `index.html`: `data-title` / `data-meta` are its index row (meta parts are
