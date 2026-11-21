@@ -14,9 +14,16 @@
   <link rel="icon" href="S.ico" />
   <link rel="preload" href="fonts/Lekton-Regular.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="preload" href="fonts/Lekton-Bold.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="modulepreload" href="js/background.js" />
+  <link rel="modulepreload" href="js/blog.js" />
+  <link rel="modulepreload" href="blog/posts.js" />
+  <link rel="modulepreload" href="js/ascii.js" />
   <link rel="modulepreload" href="js/field.js" />
+  <link rel="modulepreload" href="js/clearing.js" />
   <link rel="modulepreload" href="js/cursor.js" />
+  <link rel="modulepreload" href="js/frame.js" />
   <link rel="modulepreload" href="js/text.js" />
+  <link rel="modulepreload" href="js/wave.js" />
   <link rel="stylesheet" href="css/main.css" />
   <script>
     // Failsafe: if the scripts below never run, leave the intro state anyway.
@@ -30,6 +37,7 @@
   <header class="masthead">
     <h1 class="name"><a href="#/" data-action="home">Sheron Yang</a></h1>
     <nav class="nav" aria-label="Primary">
+      <a href="#/blogs" data-action="blogs">Blogs<sup class="count"></sup></a>
       <a href="#/projects" data-action="projects">Projects<sup class="count"></sup></a>
       <a href="#/contact" data-action="contact">Contact</a>
     </nav>
@@ -40,14 +48,21 @@
   <div class="axis axis-bottom" aria-hidden="true"><span class="caret"></span></div>
 
   <main>
-    <!-- Particle field (js/field.js), clipped to the band between the axes -->
+    <!-- The background (js/background.js: the particle field, or the one
+         chosen), clipped to the band between the axes -->
     <div class="band" aria-hidden="true"><canvas class="field"></canvas></div>
 
     <p class="about">Building something fun<br /></p>
     <p class="readout" aria-hidden="true">X 0.000   Y 0.000   Z +00.00</p>
 
     <!-- Project index: js/main.js builds one row per project <article> -->
-    <section class="index" aria-label="Projects">
+    <section class="index" data-list="projects" aria-label="Projects">
+      <ol class="index-list"></ol>
+    </section>
+
+    <!-- Blog index: js/main.js builds one row per post (blog/posts.js);
+         a post is read on a sheet of its own (js/blog.js) -->
+    <section class="index" data-list="blogs" aria-label="Blogs">
       <ol class="index-list"></ol>
     </section>
 
@@ -175,11 +190,14 @@
   </main>
 
   <footer class="footer">
-    <p class="status" aria-hidden="true"></p>
+    <!-- The background switch: js/main.js adds a button for each background
+         this device can show (MODES in js/background.js) -->
+    <div class="mode" role="group" aria-label="Background"></div>
     <div class="theme" role="group" aria-label="Color theme">
       <button type="button" data-theme-set="dark" aria-pressed="true">Dark</button>
       <button type="button" data-theme-set="light" aria-pressed="false">Light</button>
     </div>
+    <p class="mode-news visually-hidden" aria-live="polite"></p>
   </footer>
 
   <!-- Without JavaScript: one plain scrolling page with every section. -->
@@ -189,7 +207,7 @@
       .band, .axis, .readout, .index, .cursor, .footer, .nav, .panel-close { display: none; }
       .name { position: absolute; }
       main { padding: 24vh var(--edge) 20vh; }
-      .intro :is(.nav, .about), .panel :is(.panel-top, .panel-body > *, .contact-list li) { opacity: 1; transform: none; }
+      .intro :is(.nav, .about), .panel :is(.panel-top, .panel-body > *, .contact-list li) { opacity: 1; transform: none; visibility: visible; clip-path: none; }
       .intro .name { visibility: visible; }
       .about, .panel, .panel-top, .panel-scroll {
         position: static; width: auto; max-width: 46em; padding: 0; overflow: visible;

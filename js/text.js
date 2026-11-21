@@ -77,23 +77,24 @@ function startRun(el, { delay, speed, count, strike, done = () => {}, stop = () 
   return count ? delay + Math.floor((count - 1) / rate + 1e-6) * period : delay;
 }
 
+/** Whether `el` is being typed (in or out) just now. */
+export const typing = (el) => runs.has(el);
+
 /** Ends whatever `el` is typing. */
-function cut(el) {
+export function cut(el) {
   const run = runs.get(el);
   if (!run) return;
   runs.delete(el);
   run.stop();
 }
 
-/** Types the text of `el` in, keeping its markup (<br>, spans): a copy of
-    the content stands in while it types, with every character a key (a
-    <type-key>, hidden until struck; see main.css). Assistive tech reads a
-    hidden full copy meanwhile, so a heading focused mid-typing is
-    announced whole. The original nodes return as the last key lands.
-    Returns the time (ms) until then. */
-export function typeIn(el, { delay = 0, speed = 12, still = false } = {}) {
-  cut(el);
-  if (still) return 0;
+/** Sets `el` up to be typed, keeping its markup (<br>, spans): a copy of
+    the content stands in, with every character a key (a <type-key>, hidden
+    until struck; see main.css). Assistive tech reads a hidden full copy
+    meanwhile, so a heading focused mid-typing is announced whole. Returns
+    the keys, and `restore`, which puts the element's own nodes back; or
+    null if it has nothing to type (it is then left as it is). */
+function keyed(el) {
   const original = [...el.childNodes];
   const copy = document.createElement("type-text");
   copy.setAttribute("aria-hidden", "true");
@@ -117,14 +118,22 @@ export function typeIn(el, { delay = 0, speed = 12, still = false } = {}) {
     if (space) run.append(space);
     text.replaceWith(run);
   }
-  if (!keys.length) return 0;
+  if (!keys.length) return null;
 
   const spoken = document.createElement("span");
   spoken.className = "visually-hidden";
   spoken.textContent = el.textContent.replace(/\s+/g, " ").trim();
   el.replaceChildren(spoken, copy);
+  return { keys, restore: () => el.replaceChildren(...original) };
+}
 
-  const restore = () => el.replaceChildren(...original);
+/** Types the text of `el` in, a key at a time; its own nodes return as the
+    last key lands. Returns the time (ms) until then. */
+export function typeIn(el, { delay = 0, speed = 12, still = false } = {}) {
+  cut(el);
+  const set = still ? null : keyed(el);
+  if (!set) return 0;
+  const { keys, restore } = set;
   return startRun(el, {
     delay,
     speed,
@@ -135,20 +144,29 @@ export function typeIn(el, { delay = 0, speed = 12, still = false } = {}) {
   });
 }
 
-/** Replaces the text of `el` with `text`, typing only what changed: the
-    part both share stays put, the rest is struck in after it. */
-export function retype(el, text, { speed = 14, still = false } = {}) {
-  cut(el); // a retype cut short keeps what it had typed
-  if (still) { el.textContent = text; return; }
-  const current = el.textContent;
-  let shared = 0;
-  while (shared < current.length && shared < text.length && current[shared] === text[shared]) shared++;
-  const line = new Text(text.slice(0, shared));
-  el.replaceChildren(line);
-  startRun(el, {
-    delay: 0,
+/** Strikes the text of `el` out, a key at a time from the end, the way it
+    was typed in. Its own nodes are back as the last key goes (it is for
+    the caller to put the element out of sight then: `done` runs at that
+    moment, or when the run is cut short). Returns the time (ms) until then. */
+export function strikeOut(el, { delay = 0, speed = 6, still = false, done = () => {} } = {}) {
+  cut(el);
+  const set = still ? null : keyed(el);
+  if (!set) {
+    done();
+    return 0;
+  }
+  const { keys, restore } = set;
+  for (const key of keys) key.className = "is-struck";
+  const end = () => {
+    restore();
+    done();
+  };
+  return startRun(el, {
+    delay,
     speed,
-    count: text.length - shared,
-    strike: (from, to) => { line.data = text.slice(0, shared + to); },
+    count: keys.length,
+    strike: (from, to) => { for (let i = from; i < to; i++) keys[keys.length - 1 - i].className = ""; },
+    done: end,
+    stop: end,
   });
 }
