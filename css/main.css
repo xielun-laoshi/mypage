@@ -52,7 +52,7 @@
 
   /* Type scales with the viewport width up to large desktop displays. */
   --fs-label: clamp(11px, 8.6px + 0.27vw, 14.5px);   /* typed caps: nav, controls */
-  --fs-small: calc(var(--fs-label) * 0.95);           /* readout, status */
+  --fs-small: calc(var(--fs-label) * 0.95);           /* readout */
   --fs-spec: clamp(12.5px, 10.6px + 0.22vw, 16px);    /* typed spec lines */
   --fs-name: min(clamp(1.4rem, 2.1vw, 3.2rem), var(--line) * 0.32); /* fits short screens */
   --fs-title: clamp(1.4rem, 0.7rem + 1.6vw, 3rem);
@@ -62,17 +62,51 @@
 
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* The band's grid of characters (js/ascii.js), which js/frame.js copies
+     here: a cell, where the first column starts (cut off at the left
+     edge), and the ruler typed across it (`--ruler`, a string). The frame's
+     typed parts (rulers, carets, the name, rules) are set in the band's own
+     type: Lekton at 9 px, a character to a cell, bold where a pixel is a
+     whole CSS px, as the screen sets it. */
+  --cell-w: 7px;
+  --cell-h: 9px;
+  --grid-x: 0px;
+  --grid-y: 0px;      /* the band's rows, carried over the page: one starts here */
+  --ov-top: 0px;      /* how far the band's first row reaches above the top line, */
+  --ov-bottom: 0px;   /* and its last below the bottom one (see .band) */
+  --ruler: "";
+  --column: "";       /* the panels' edge, a character to a row (`¦`, `+`) */
+  --typed-weight: 700;
+  --typed-track: calc(var(--cell-w) - 4.5px); /* Lekton advances 0.5 em */
+}
+
+@media (min-resolution: 1.5dppx) {
+  :root { --typed-weight: 400; }
 }
 
 @supports (height: 100dvh) {
   :root { --line: 15dvh; --mid: 50dvh; }
 }
 
+/* (Dark type on light paper reads lighter than it is, and the frame's
+   typed parts, thin at 9 px, came out pale and soft on the light page. As
+   the screen does with its own there (STRIKE in js/ascii.js), they are set
+   in the regular cut at every pixel ratio and firmed: struck four times
+   in one place (--typed-firm, shadows that are the type itself), which
+   draws their soft edges up toward full ink.) */
 [data-theme="light"] {
   --bg: #ededed;
   --ink: #171717;
   --ink-2: #646464;   /* 5.1:1 on --bg */
   --ink-3: #a3a3a3;
+  --typed-weight: 400;
+  --typed-firm: 0 0 0 currentColor, 0 0 0 currentColor, 0 0 0 currentColor;
+}
+
+.name-art, .axis, .cursor, .panel::before, .panel::after, .panel-meta::before, .panel-meta::after,
+.code::before, .code::after, post-demo::before, post-demo::after, .post-text hr:not(.demo-stage *)::before, .post-progress {
+  text-shadow: var(--typed-firm, none);
 }
 
 /* --------------------------------------------------------------------------
@@ -102,11 +136,6 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Without view transitions, the theme cross-fades instead of sweeping. */
-@supports not (view-transition-name: none) {
-  body { transition: background-color 0.5s ease, color 0.5s ease; }
-}
-
 h1, h2, p, ol, ul { margin: 0; padding: 0; }
 ol, ul { list-style: none; }
 a { color: inherit; text-decoration: none; }
@@ -123,8 +152,6 @@ button {
 }
 
 a, button { -webkit-tap-highlight-color: transparent; }
-
-.nowrap { white-space: nowrap; }
 
 /* Read by assistive tech, not shown. */
 .visually-hidden {
@@ -145,7 +172,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 /* Typed caps, like the field names on a label: navigation, controls,
    counters, readouts. */
-.nav, .readout, .status, .theme, .row-no, .panel-top, .panel-steps {
+.nav, .readout, .mode, .theme, .row-no, .panel-top, .panel-steps {
   font-size: var(--fs-label);
   line-height: 1.4;
   letter-spacing: 0.12em;
@@ -161,7 +188,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 /* The frame's labels sit on paper, so project rows ghosting past the axes
    pass behind them instead of through them. */
-.name a, .nav a, .theme button, .status {
+.name a, .nav a, .mode button, .theme button {
   --chip-y: 0.25em;
   --chip-x: 0.5em;
   padding: var(--chip-y) var(--chip-x);
@@ -172,7 +199,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
 /* Touch screens: every control's target is at least 24px tall (the padding
    grows; the text stays where it is). */
 @media (pointer: coarse) {
-  .nav a, .theme button, .panel-close, .panel-steps a {
+  .nav a, .mode button, .theme button, .panel-close, .panel-steps a {
     --chip-y: 6px;
     padding-top: var(--chip-y);
     padding-bottom: var(--chip-y);
@@ -180,7 +207,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
     margin-bottom: calc(-1 * var(--chip-y));
   }
   .name a { --chip-y: 4px; }
-  .panel-link, .source a { padding: 3px 0; margin: -3px 0; }
+  .panel-link, .source a, .post-contents a { padding: 3px 0; margin: -3px 0; }
 }
 
 /* --------------------------------------------------------------------------
@@ -188,12 +215,15 @@ a, button { -webkit-tap-highlight-color: transparent; }
    -------------------------------------------------------------------------- */
 
 /* The name floats centered in the band above the top axis (the controls,
-   by contrast, sit on the axes): typed caps, spaced like a label. */
+   by contrast, sit on the axes): typed caps, spaced like a label. With
+   scripts, js/frame.js sets it in the band's characters (.name-art): its
+   capitals drawn large and each cell struck with the character of matching
+   ink, on the band's columns. */
 .name {
   position: fixed;
   z-index: 40;
   top: 0;
-  left: var(--edge);
+  left: var(--name-x, var(--edge));
   height: var(--line);
   display: flex;
   align-items: center;
@@ -202,23 +232,33 @@ a, button { -webkit-tap-highlight-color: transparent; }
   text-transform: uppercase;
 }
 
-.name a {
+.name a { display: block; }
+
+/* (On phones it is set smaller, --name-scale, to fit beside the nav. On a
+   layer of its own, without a background, it is smoothed in grays, as the
+   screen's characters are, rather than in the colored fringes of subpixel
+   text; so are the rulers.) */
+.name-art {
+  --s: var(--name-scale, 1);
   display: block;
-  transition: letter-spacing 0.9s var(--ease-out);
+  will-change: transform;
+  padding-left: 0.05em; /* centered in its cells, 0.6 em wide (js/frame.js) */
+  font: var(--typed-weight) calc(9px * var(--s)) / calc(var(--cell-h) * var(--s)) var(--type);
+  letter-spacing: 0.1em;
+  white-space: pre;
+  text-transform: none;
 }
 
-/* The name breathes out, its letters easing apart. */
-@media (hover: hover) {
-  .name a:hover { letter-spacing: 0.24em; }
-}
-
+/* The controls keep --gap from the rulers' dashes, which run half a cell
+   outside the band (see .axis), and room between them for two pairs of
+   brackets (see below). */
 .nav {
   position: fixed;
   z-index: 40;
   right: var(--edge);
-  bottom: calc(100% - var(--line) + var(--gap));
+  bottom: calc(100% - var(--line) + var(--gap) + var(--cell-h) / 2 + var(--ov-top));
   display: flex;
-  gap: 2.6em;
+  gap: 3.4em;
 }
 
 .count {
@@ -228,97 +268,124 @@ a, button { -webkit-tap-highlight-color: transparent; }
   color: var(--ink-2);
 }
 
-/* Square markers: hover shows an outline, the current view a solid one. */
-.nav a, .theme button, .panel-close, .panel-steps a {
+/* Typed brackets mark a choice: struck faint under the pointer, `[` and
+   then `]` (as two keys); the current view, the background chosen and the
+   theme in use stand in them. Nothing slides or fades: a label lights or
+   dims at once, as a typed one would. (Each pair is measured from the
+   text, not the chip, a space either side; neither is read out with the
+   label.) */
+.nav a, .mode button, .theme button, .panel-close, .panel-steps a {
   position: relative;
   display: inline-block;
-  transition: transform 0.5s var(--ease-out);
 }
 
-.nav a::before, .theme button::before {
-  content: "";
+:is(.nav a, .mode button, .theme button)::before,
+:is(.nav a, .mode button, .theme button)::after {
   position: absolute;
-  left: calc(var(--chip-x) - 1.15em); /* measured from the text, not the chip */
-  top: 50%;
-  width: 0.5em;
-  height: 0.5em;
-  margin-top: -0.3em;
-  border: 1px solid currentColor;
+  top: var(--chip-y);
+  letter-spacing: 0;
+  color: var(--ink-3);
   opacity: 0;
-  transform: scale(0.4);
-  transition: opacity 0.35s ease, transform 0.5s var(--ease-out), background-color 0.3s ease;
 }
 
-.nav a[aria-current]::before, .theme button[aria-pressed="true"]::before {
+:is(.nav a, .mode button, .theme button)::before {
+  content: "[";
+  content: "[" / "";
+  left: calc(var(--chip-x) - var(--bracket, 1.24em));
+}
+
+:is(.nav a, .mode button, .theme button)::after {
+  content: "]";
+  content: "]" / "";
+  right: calc(var(--chip-x) - var(--bracket, 1.24em) + 0.12em); /* (past the label's last letter-space) */
+}
+
+.nav a[aria-current]::before, .nav a[aria-current]::after,
+:is(.mode, .theme) button[aria-pressed="true"]::before,
+:is(.mode, .theme) button[aria-pressed="true"]::after {
   opacity: 1;
-  transform: none;
-  background: currentColor;
+  color: currentColor;
 }
 
-.theme button[aria-pressed="false"] { color: var(--ink-2); }
+:is(.nav a, .mode button, .theme button):is([aria-current], [aria-pressed="true"], :hover)::after {
+  transition: opacity 0s 0.07s; /* the second key */
+}
+
+:is(.mode, .theme) button[aria-pressed="false"] { color: var(--ink-2); }
+
+/* The background chosen is still on its way (loading, or building): its
+   brackets blink, as a cursor waiting. The delay keeps a change that
+   starts at once from blinking. */
+.mode button[data-pending]::before,
+.mode button[data-pending]::after { animation: wait 0.8s steps(1) 0.4s infinite; }
+
+@keyframes wait {
+  50% { opacity: 0.2; }
+}
 
 @media (hover: hover) {
-  .nav a:hover::before, .theme button:hover::before { opacity: 1; transform: none; }
-  .theme button:hover { color: var(--ink); }
+  :is(.nav a, .mode button, .theme button):hover::before,
+  :is(.nav a, .mode button, .theme button):hover::after { opacity: 1; }
+  :is(.mode, .theme) button:hover { color: var(--ink); }
 }
 
+/* The axes are rulers typed on the band's grid, one row just outside each
+   edge of the band: a dash to a column, `+` where the major ticks stand
+   (sixths of the span between the page's edges; js/frame.js types them).
+   Each character is centered in its column, as the screen centers its
+   own. */
 .axis {
   position: fixed;
   z-index: 30;
   left: 0;
   right: 0;
-  height: 1px;
-  background: var(--ink);
+  height: var(--cell-h);
+  overflow: hidden;
+  font: var(--typed-weight) 9px / var(--cell-h) var(--type);
+  letter-spacing: var(--typed-track);
+  white-space: pre;
   pointer-events: none;
+  will-change: transform; /* (see .name-art) */
 }
 
-.axis-top    { top: var(--line); }
-.axis-bottom { bottom: var(--line); }
-
-/* Ruler ticks hang into the band: minor every 1/48 of the span, major every
-   1/6. */
-.axis::before, .axis::after {
-  content: "";
-  position: absolute;
-  left: var(--edge);
-  right: var(--edge);
-  background-repeat: repeat-x;
-}
+.axis-top    { top: calc(var(--line) - var(--ov-top) - var(--cell-h)); }
+.axis-bottom { bottom: calc(var(--line) - var(--ov-bottom) - var(--cell-h)); }
 
 .axis::before {
-  height: 4px;
-  background-image: linear-gradient(to right, var(--ink-3) 1px, transparent 0);
-  background-size: calc((100% - 1px) / 48) 100%;
+  content: var(--ruler);
+  position: absolute;
+  top: 0;
+  left: calc(var(--grid-x) + var(--typed-track) / 2);
 }
 
-.axis::after {
-  height: 8px;
-  background-image: linear-gradient(to right, var(--ink-2) 1px, transparent 0);
-  background-size: calc((100% - 1px) / 6) 100%;
-}
-
-.axis-top::before, .axis-top::after { top: 1px; }
-.axis-bottom::before, .axis-bottom::after { bottom: 1px; }
-
-/* The pointer's position, marked on both axes. */
+/* The pointer's column, marked on both rulers: its cell struck inverted,
+   pointing into the band (js/main.js steps it from column to column). */
 .caret {
   position: absolute;
+  top: 0;
   left: 0;
-  top: -5px;
-  width: 1px;
-  height: 11px;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  padding-left: calc(var(--typed-track) / 2);
   background: var(--ink);
+  color: var(--bg);
   opacity: 0;
-  transition: opacity 0.4s ease;
 }
+
+.axis-top .caret::before    { content: "v"; }
+.axis-bottom .caret::before { content: "^"; }
 
 .is-probing .caret { opacity: 1; }
 
+/* The band is whole rows of its grid: its first row starts a little above
+   the top line and its last ends a little below the bottom one (--ov-top,
+   --ov-bottom, a row at the most: js/frame.js works them out), so the
+   rulers, on the rows next to those, stand against its own characters. */
 .band {
   position: fixed;
   z-index: 1;
-  top: var(--line);
-  bottom: var(--line);
+  top: calc(var(--line) - var(--ov-top));
+  bottom: calc(var(--line) - var(--ov-bottom));
   left: 0;
   right: 0;
   overflow: hidden;
@@ -327,11 +394,21 @@ a, button { -webkit-tap-highlight-color: transparent; }
 /* A finger drags across the field to probe it (pinch zoom still works). */
 .band, .about { touch-action: pinch-zoom; }
 
-.field {
+/* The background's canvases stack in the band while one cross-fades into
+   the next (js/background.js). The band, not a canvas, takes the pointer:
+   main.js reads it from the window, and touch probes start on the band. */
+.field, .screen {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
+  pointer-events: none;
 }
+
+/* Typed (js/ascii.js): the backgrounds draw out of sight, and the screen
+   sets what they draw in characters. */
+.band.is-typed > .field { visibility: hidden; }
 
 /* A caption on the field's bottom-left, mirroring the readout at top-right:
    both sit --gap inside their axis. */
@@ -344,15 +421,34 @@ a, button { -webkit-tap-highlight-color: transparent; }
   font: 400 var(--fs-about) / 1.45 var(--type);
   letter-spacing: 0.005em;
   text-wrap: balance;
-  transition: opacity 0.7s var(--ease-out) 0.25s, transform 1s var(--ease-out) 0.25s, visibility 0s;
 }
 
-[data-view="projects"] .about {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(0.4em);
-  transition: opacity 0.3s ease, transform 0.3s ease, visibility 0s 0.3s;
+/* Over the list the caption goes, struck out from its end (.is-leaving
+   while that runs); back home it types itself in again (js/main.js). */
+:is([data-view="projects"], [data-view="blogs"]) .about:not(.is-leaving) { visibility: hidden; }
+
+/* The caption types in with a cursor riding just ahead of its keys (the
+   next key's place), which then waits after it, blinking (js/main.js adds
+   .about-cursor). (A key is out of sight until it is struck, so the cursor
+   at its place is put in sight outright: only where the caption itself is,
+   --cursor.) */
+.about { --cursor: visible; }
+.intro .about, :is([data-view="projects"], [data-view="blogs"]) .about:not(.is-leaving) { --cursor: hidden; }
+.about type-key { position: relative; }
+
+.about type-key:first-child:not(.is-struck)::before,
+.about type-key.is-struck + type-key:not(.is-struck)::before,
+.about-cursor::before {
+  content: "_";
+  visibility: var(--cursor);
 }
+
+.about type-key::before { position: absolute; left: 0; }
+.about type-text .about-cursor { display: none; } /* (while it types) */
+/* (It blinks on js/main.js's timer, in and out of sight every 0.55 s. As
+   an animation it had the browser work out the page's styles again on
+   every frame, for as long as the page was open, on every view.) */
+.about-cursor.is-out::before { opacity: 0; }
 
 .readout {
   position: fixed;
@@ -366,24 +462,19 @@ a, button { -webkit-tap-highlight-color: transparent; }
 
 .is-probing .readout { color: var(--ink-2); }
 
-.status, .theme {
+/* Two sets of choices under the bottom axis, mirrored in its corners: the
+   backgrounds (js/main.js adds one button for each) and the themes. */
+.mode, .theme {
   position: fixed;
   z-index: 40;
-  top: calc(100% - var(--line) + var(--gap));
-}
-
-.status {
-  left: var(--edge);
-  font-size: var(--fs-small);
-  white-space: pre;
-  color: var(--ink-2);
-}
-
-.theme {
-  right: var(--edge);
+  top: calc(100% - var(--line) + var(--gap) + var(--cell-h) / 2 + var(--ov-bottom));
   display: flex;
-  gap: 2.6em;
+  gap: 3.4em;
 }
+
+.mode { left: var(--edge); }
+.mode[hidden] { display: none; } /* a device with one background has no choice to show */
+.theme { right: var(--edge); }
 
 /* --------------------------------------------------------------------------
    Typing (js/text.js typeIn): while an element types itself in, each
@@ -415,20 +506,16 @@ type-key.is-struck { visibility: inherit; }
     #000 calc(100% - var(--line)), rgb(0 0 0 / var(--ghost)) calc(100% - var(--line)));
   mask-image: linear-gradient(rgb(0 0 0 / var(--ghost)) var(--line), #000 var(--line),
     #000 calc(100% - var(--line)), rgb(0 0 0 / var(--ghost)) calc(100% - var(--line)));
-  opacity: 0;
   visibility: hidden;
-  transition: opacity 0.35s ease, visibility 0s 0.35s;
 }
 
 .index::-webkit-scrollbar { display: none; }
 
 .index-list { max-width: calc(100vw - var(--panel-w) - var(--edge) - 2vw); }
 
-[data-view="projects"] .index {
-  opacity: 1;
-  visibility: visible;
-  transition: opacity 0.2s ease;
-}
+/* (Two lists, the projects and the posts, each in view with its own view.) */
+[data-view="projects"] .index[data-list="projects"],
+[data-view="blogs"] .index[data-list="blogs"] { visibility: visible; }
 
 .row + .row { margin-top: clamp(26px, 4.6vh, 50px); }
 
@@ -436,36 +523,35 @@ type-key.is-struck { visibility: inherit; }
   display: grid;
   grid-template-columns: 4.4em 1fr;
   align-items: baseline;
-  transition: opacity 0.45s ease;
+  transition: opacity 0.16s steps(2, end);
 }
 
 .row-no {
-  grid-row: 1 / span 2;
+  grid-row: 1 / span 3;
   color: var(--ink-2);
   white-space: nowrap;
 }
 
-/* A short rule grows out of the number toward the active/hovered title
-   (scaled, not resized, so it animates without relayout). */
+/* An arrow types out of the number toward the active/hovered title, a key
+   at a time (clipped, so it types without relayout), and as its point lands
+   the title steps over by a character, as a typed line is indented. Both go
+   at once. */
 .row-no::after {
-  content: "";
+  content: "->";
+  content: "->" / "";
   display: inline-block;
-  width: 1.6em;
-  height: 1px;
   margin-left: 0.6em;
-  vertical-align: 0.3em;
-  background: currentColor;
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.6s var(--ease-out);
+  clip-path: inset(0 100% 0 0);
 }
 
 .row-title {
   display: block;
   font: 400 var(--fs-title) / 1.15 var(--type);
   text-wrap: balance;
-  transition: transform 0.7s var(--ease-out);
 }
+
+.row.is-active .row-no::after, .row-link:hover .row-no::after { transition: clip-path 0.24s steps(2, end); }
+.row.is-active .row-title, .row-link:hover .row-title { transition: transform 0.24s steps(1, end); }
 
 .row-meta {
   grid-column: 2;
@@ -473,29 +559,42 @@ type-key.is-struck { visibility: inherit; }
   color: var(--ink-2);
 }
 
-/* Titles type themselves in (js/main.js); numbers and specs follow. */
-.row-no, .row-meta {
-  opacity: 0;
-  transition: opacity 0s 0.35s, color 0.4s ease;
+/* (A list with nothing in it yet: one line, set as a row is.) */
+.row-none { display: grid; grid-template-columns: 4.4em 1fr; align-items: baseline; }
+.row-none .row-title { color: var(--ink-2); }
+
+/* A post's line in the list: what it is about, under its date. */
+.row-summary {
+  grid-column: 2;
+  max-width: 34em;
+  margin-top: 0.7em;
+  font-size: var(--fs-spec);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
 }
 
-[data-view="projects"] .row-no,
-[data-view="projects"] .row-meta {
+/* Titles type themselves in (js/main.js); numbers and specs are struck in
+   after them, row by row. */
+.row-no, .row-meta, .row-summary { opacity: 0; }
+
+[data-view="projects"] .index[data-list="projects"] :is(.row-no, .row-meta, .row-summary),
+[data-view="blogs"] .index[data-list="blogs"] :is(.row-no, .row-meta, .row-summary) {
   opacity: 1;
-  transition: opacity 0.9s var(--ease-out) calc(0.3s + var(--i) * 0.06s), color 0.4s ease;
+  transition: opacity 0s calc(0.3s + var(--i) * 0.07s);
 }
 
-.row.is-active .row-title { transform: translateX(0.35em); }
-.row.is-active .row-no::after { transform: none; }
+.row.is-active .row-title { transform: translateX(0.5em); }
+.row.is-active .row-no::after { clip-path: inset(0); }
 .row.is-active .row-no { color: var(--ink); }
 /* With a project open the other rows recede, but not the one under the
    pointer: hovering lights a row the same way before and after. */
 [data-overlay="project"] .row:not(.is-active) .row-link:not(:hover) { opacity: 0.32; }
 
 @media (hover: hover) {
-  .index-list.has-hover .row-link:not(:hover) { opacity: 0.32; }
-  .row-link:hover .row-title { transform: translateX(0.35em); }
-  .row-link:hover .row-no::after { transform: none; }
+  .index-list.has-hover .row-link:not(:hover, :focus-visible) { opacity: 0.32; }
+  .row-link:hover .row-title { transform: translateX(0.5em); }
+  .row-link:hover .row-no::after { clip-path: inset(0); }
   .row-link:hover .row-no, .row-link:hover .row-meta { color: var(--ink); }
 }
 
@@ -513,30 +612,54 @@ type-key.is-struck { visibility: inherit; }
   width: var(--panel-w);
   background: var(--bg);
   border-left: 1px solid var(--ink);
-  transform: translateX(101%);
   visibility: hidden;
-  transition: transform 0.85s var(--ease-in-out), visibility 0s 0.85s;
 }
 
-/* The arriving panel passes over the leaving one. */
-.panel.is-open {
-  z-index: 21;
-  transform: none;
-  visibility: visible;
-  transition: transform 1.05s var(--ease-out);
+/* Its edge starts on one of the band's columns (the nearest), so that the
+   band ends in whole characters there and the edge meets the rulers'. */
+@supports (width: round(1px, 1px)) {
+  .panel { width: calc(100vw - var(--grid-x) - round(100vw - var(--panel-w) - var(--grid-x), var(--cell-w))); }
 }
 
-/* Project to project: cross-fade in place. */
-.panel.is-swap {
-  transform: none;
-  opacity: 0;
-  transition: opacity 0.35s ease, visibility 0s 0.35s;
+/* The edge is typed like the rulers, in that column: a broken bar to every
+   one of the band's rows (carried up and down the page), and a `+` where it
+   crosses a ruler (js/frame.js types it, --column). Where generated text
+   can't be kept from being read out, the panel keeps its line. */
+@supports (content: "" / "") {
+  .panel { border-left: 0; }
+
+  .panel::before {
+    content: var(--column) / "";
+    position: absolute;
+    top: var(--grid-y);
+    left: 0;
+    width: var(--cell-w);
+    padding-left: calc(var(--typed-track) / 2);
+    font: var(--typed-weight) 9px / var(--cell-h) var(--type);
+    white-space: pre;
+    pointer-events: none;
+    will-change: transform; /* (smoothed in grays, see .name-art) */
+  }
 }
 
-.panel.is-swap.is-open {
-  opacity: 1;
-  transition: opacity 0.6s var(--ease-out) 0.1s;
+/* Panels show and go without a slide or a fade: the change between them is
+   typed over their place (js/wave.js, under the rulers and the frame's
+   labels). The arriving panel is open (its heading focused) but out of
+   sight until its place has filled (.is-veiled); one that leaves stays in
+   sight (.is-leaving) under the fill that replaces it, or while the wave
+   that takes it passes (cut away behind the wave's paper, js/main.js). */
+.panel.is-open, .panel.is-leaving { visibility: visible; }
+.panel.is-open { z-index: 21; }
+.panel.is-veiled { opacity: 0; }
+.panel.is-leaving { pointer-events: none; }
+
+.wipe {
+  position: fixed;
+  z-index: 22;
+  pointer-events: none;
 }
+
+.wipe.over { z-index: 52; } /* (over a sheet, which covers the frame) */
 
 .panel-top, .panel-steps {
   position: absolute;
@@ -545,22 +668,39 @@ type-key.is-struck { visibility: inherit; }
   gap: 2.6em;
 }
 
-.panel-top { bottom: calc(100% - var(--line) + var(--gap)); }
-.panel-steps { top: calc(100% - var(--line) + var(--gap)); }
+.panel-top { bottom: calc(100% - var(--line) + var(--gap) + var(--cell-h) / 2 + var(--ov-top)); }
+.panel-steps { top: calc(100% - var(--line) + var(--gap) + var(--cell-h) / 2 + var(--ov-bottom)); }
 
 .panel-count { font: inherit; color: var(--ink-2); }
 
+/* Under the pointer the close link stands in brackets like the nav's
+   (`[ x CLOSE ]`, hung outside it, so nothing moves), and the steps'
+   arrows grow a dash (`<--`, `-->`). */
 .panel-close::before {
-  content: "×";
-  display: inline-block;
-  margin-right: 0.55em;
-  transition: transform 0.6s var(--ease-out);
+  content: "x ";
+  content: "x " / "";
+  white-space: pre;
+  text-transform: none;
+}
+
+.panel-close::after {
+  content: " ]";
+  content: " ]" / "";
+  position: absolute;
+  left: 100%;
+  white-space: pre;
+  opacity: 0;
 }
 
 @media (hover: hover) {
-  .panel-close:hover::before { transform: rotate(90deg); }
-  .panel-steps a:hover { transform: translateX(0.25em); }
-  .panel-steps a:first-child:hover { transform: translateX(-0.25em); }
+  .panel-close:hover::before {
+    content: "[ x ";
+    content: "[ x " / "";
+    margin-left: -1.24em; /* (the "[ " hangs left: the x stays put) */
+  }
+  .panel-close:hover::after { opacity: 1; transition: opacity 0s 0.07s; }
+  .panel-steps a:first-child:hover span::after { content: "-"; }
+  .panel-steps a:last-child:hover span::before { content: "-"; }
 }
 
 .panel-scroll {
@@ -585,21 +725,37 @@ type-key.is-struck { visibility: inherit; }
 
 .panel h2 { outline: none; } /* focused programmatically when a panel opens */
 
-/* The specs, stacked between hairlines like the typed lines on a label;
-   the rules appear as the specs start typing (--delay, set by js/main.js). */
+/* The specs, stacked between rules like the typed lines on a label: rows
+   of dashes in the rulers' type, which type themselves out, left to right,
+   as the specs start typing (--delay, set by js/main.js). */
 .panel-meta {
   margin-top: 1.4em;
-  padding: 0.8em 0;
-  border-top: 1px solid var(--ink-3);
-  border-bottom: 1px solid var(--ink-3);
   white-space: pre-line;
   color: var(--ink-2);
 }
 
-.panel.is-open .panel-meta { animation: rule-in 0.4s ease var(--delay, 0s) backwards; }
+.panel-meta::before, .panel-meta::after,
+.code::before, .code::after, post-demo::before, post-demo::after, .post-text hr:not(.demo-stage *)::before {
+  content: "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------";
+  content: "--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------" / "";
+  display: block;
+  overflow: hidden;
+  font: var(--typed-weight) 9px / var(--cell-h) var(--type);
+  letter-spacing: var(--typed-track);
+  white-space: pre;
+  color: var(--ink-3);
+  pointer-events: none; /* (a rule is drawn, not pressed: one close under a demo's controls takes nothing from them) */
+}
 
-@keyframes rule-in {
-  from { border-color: transparent; }
+.panel-meta::before { margin-bottom: 0.6em; }
+.panel-meta::after  { margin-top: 0.6em; }
+
+.panel.is-open:not(.is-veiled) .panel-meta::before,
+.panel.is-open:not(.is-veiled) .panel-meta::after { animation: type-rule 0.45s steps(24, end) var(--delay, 0s) backwards; }
+
+@keyframes type-rule {
+  from { clip-path: inset(0 100% 0 0); }
+  to   { clip-path: inset(0); }
 }
 
 .panel-body > p:not(.panel-meta) {
@@ -615,30 +771,34 @@ type-key.is-struck { visibility: inherit; }
   text-decoration-thickness: 1px;
   text-underline-offset: 0.22em;
   text-decoration-color: var(--ink-3);
-  transition: text-decoration-color 0.3s ease, transform 0.6s var(--ease-out);
 }
 
 @media (hover: hover) {
   .panel-link:hover, .source a:hover, .contact-list a:hover { text-decoration-color: currentColor; }
 }
 
-/* Panel content arrives in sequence once the sheet is moving; the heading
-   and specs type themselves in, and js/main.js sets the --delay of what
-   follows them (and of the contact rows, each with its typed link). */
-.panel-top, .panel-steps, .panel-body > :not(h2, .panel-meta, .contact-list), .contact-list li {
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.3s ease, transform 0s 0.85s;
+/* Panel content arrives once the panel shows: its labels, heading and
+   specs type themselves in (js/main.js), its paragraphs print a line at a
+   time (--lines, from --delay), and each contact row is struck in as its
+   link starts to type. */
+.panel-body:not(.post-body) > :not(h2, .panel-meta, .contact-list) { clip-path: inset(0 0 100% 0); }
+
+.panel.is-open:not(.is-veiled) .panel-body:not(.post-body) > :not(h2, .panel-meta, .contact-list) {
+  clip-path: inset(0);
+  transition: clip-path calc(var(--lines, 1) * 40ms) steps(var(--lines, 1), end) var(--delay, 0s);
 }
 
-.panel.is-open :is(.panel-top, .panel-steps, .panel-body > :not(h2, .panel-meta, .contact-list), .contact-list li) {
-  opacity: 1;
-  transform: none;
-  transition: opacity 0.9s var(--ease-out) var(--delay, 0.45s), transform 1.1s var(--ease-out) var(--delay, 0.45s);
+.contact-list li { visibility: hidden; }
+
+.panel.is-open:not(.is-veiled) .contact-list li {
+  visibility: visible;
+  transition: visibility 0s var(--delay, 0s);
 }
 
-.panel-top { --delay: 0.3s; }
-.panel-steps { --delay: 0.66s; }
+/* (A panel that is leaving keeps all of it in sight until the wave has
+   passed, or the next panel has covered it.) */
+.panel.is-leaving .panel-body:not(.post-body) > :not(h2, .panel-meta, .contact-list) { clip-path: inset(0); }
+.panel.is-leaving .contact-list li { visibility: visible; }
 
 /* Contact */
 .contact-list li + li { margin-top: clamp(18px, 3.4vh, 34px); }
@@ -654,10 +814,6 @@ type-key.is-struck { visibility: inherit; }
   color: var(--ink-2);
 }
 
-@media (hover: hover) {
-  .contact-list a:hover { transform: translateX(0.12em); }
-}
-
 .source {
   margin-top: clamp(40px, 9vh, 96px);
   color: var(--ink-2);
@@ -666,26 +822,640 @@ type-key.is-struck { visibility: inherit; }
 .source, .panel-body > p:has(> .panel-link) { text-wrap: balance; }
 
 /* --------------------------------------------------------------------------
-   Cursor: a lens that inverts what is under it (js/cursor.js moves it)
+   Blog. The list of posts is the project list's twin (js/main.js builds
+   both). A post is read on a sheet that covers the whole page on every
+   screen, as a project's does on a phone: js/blog.js builds it like a
+   panel, and it opens, closes and types itself in as one.
+   -------------------------------------------------------------------------- */
+
+/* The sheet. Its rulers stand nearer the screen's edges than the page's,
+   to give the text room; each on a row of the page's grid (where the
+   browser can round to one), as the wave that brings the sheet is made of
+   those rows. */
+.panel.post {
+  --line: clamp(58px, 9vh, 92px);
+  --rule-top: calc(var(--line) - var(--cell-h));
+  --rule-low: calc(100% - var(--line));
+  /* What is read on it is sized for it. The text's type grows with the
+     window, gently (--read: 15 px on a phone, 16.5 px in a laptop's
+     window, 17.7 px at 1920). A line of it holds 76 characters where the
+     window has them (--prose-min) and never more than 100 (--prose-max:
+     the face advances half an em). Headings and what is set smaller in
+     the text (code, captions, tables) keep step with it. How wide the
+     text, a figure and a demo stand is worked out from these, on
+     .post-body below. */
+  --read: clamp(15px, 11.9px + 0.3vw, 21px);
+  --read-title: min(var(--fs-title), 2.1 * var(--read));
+  --read-head: clamp(1.25rem, 1.3 * var(--read), 1.75rem);
+  --read-small: max(var(--fs-spec), 0.83 * var(--read));
+  --prose-min: calc(38 * var(--read));
+  --prose-max: calc(50 * var(--read));
+  --post-pad: clamp(32px, 7vh, 84px);
+  --post-foot: clamp(56px, 14vh, 140px);
+  --tall: 100vh;
+  z-index: 50;
+  width: 100vw;
+  border-left: 0;
+}
+
+@supports (width: round(1px, 1px)) {
+  .panel.post {
+    --rule-top: calc(var(--grid-y) + round(var(--line) - var(--cell-h) - var(--grid-y), var(--cell-h)));
+    --rule-low: calc(var(--grid-y) + round(100% - var(--line) - var(--grid-y), var(--cell-h)));
+  }
+}
+
+/* (On a phone the strips follow the viewport as it is, as the page's do.) */
+@supports (height: 100dvh) {
+  .panel.post { --line: clamp(58px, 9dvh, 92px); --tall: 100dvh; }
+}
+
+.panel.post.is-open { z-index: 51; }
+
+.post .panel-top, .post .panel-steps { left: var(--edge); right: var(--edge); justify-content: space-between; }
+.post .panel-top { top: calc(var(--rule-top) - var(--gap) - 1.4em); bottom: auto; }
+.post .panel-steps { top: calc(var(--rule-low) + var(--cell-h) + var(--gap)); }
+.post .panel-steps[hidden] { display: none; }
+
+.post .panel-scroll {
+  top: calc(var(--rule-top) + var(--cell-h));
+  bottom: calc(100% - var(--rule-low));
+  padding: 0 var(--edge); /* (the room above and below the text is the text's own: .post-body, .post-end) */
+  border-top: 1px solid var(--ink);
+  border-bottom: 1px solid var(--ink);
+}
+
+/* A post is long, and on a screen between 1 and 1.5 device px to a CSS px
+   (Windows at 125%, say) the browser, left to itself, scrolls its sheet
+   on the main thread: every step of a scroll paints and rasters the sheet
+   anew (some 30 frames lost in a slow scroll through this post at 1.25,
+   6 with the hint). The hint moves the scrolling to the compositor
+   there. It has one effect that is seen, and was chosen with it: text
+   scrolled so is smoothed in grays, where without it the browser smooths
+   this sheet's text in grays or in colored subpixels by turns, as the
+   window's height falls (gray at most heights; the page's typed parts are
+   gray at all of them). And the compositor sets what it scrolls on the
+   screen's pixels in its own way: at some places of a scroll a paragraph
+   stands one device pixel lower than it did (qa/README.md has the
+   measure). Not at 1 and under: there the text is in subpixels at every
+   size of window, and stays so. From 1.5 up the browser does all this by
+   itself, and the hint changes nothing. (A side panel's text is short;
+   the hint gained it nothing that could be measured, and it has none.) */
+@media (min-resolution: 1.05dppx) {
+  .post .panel-scroll { will-change: scroll-position; }
+}
+
+/* It covers the page's rulers, so it types its own (unread; where the
+   browser can't keep generated text from being read, it keeps its lines). */
+@supports (content: "" / "") {
+  .post .panel-scroll { border: 0; }
+
+  .panel.post::before, .panel.post::after {
+    content: var(--ruler) / "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: var(--cell-h);
+    padding-left: 0;
+    overflow: hidden;
+    font: var(--typed-weight) 9px / var(--cell-h) var(--type);
+    letter-spacing: var(--typed-track);
+    text-indent: calc(var(--grid-x) + var(--typed-track) / 2);
+    white-space: pre;
+    pointer-events: none;
+  }
+
+  .panel.post::before { top: var(--rule-top); }
+  .panel.post::after  { top: var(--rule-low); bottom: auto; }
+}
+
+/* How far the reader has come, marked on the top ruler as the pointer is
+   on the page's: an inverted cell that steps from column to column
+   (js/blog.js moves it; it shows once there is something to scroll). */
+.post-progress {
+  position: absolute;
+  z-index: 1;
+  top: var(--rule-top);
+  left: 0;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  padding-left: calc(var(--typed-track) / 2);
+  background: var(--ink);
+  color: var(--bg);
+  font: var(--typed-weight) 9px / var(--cell-h) var(--type);
+  visibility: hidden;
+}
+
+.post-progress::before { content: "v"; }
+.post.is-long:is(.is-open, .is-leaving):not(.is-veiled) .post-progress { visibility: visible; } /* (it goes with the sheet, under the wave) */
+
+/* Three widths, one inside the next, worked out here from the window:
+
+     --full   what the sheet has for the post: all of a narrow window;
+              beside the rail (below), what a wide one has left, and no
+              more than four thirds of the longest line of text
+     --prose  the text: three quarters of that, but at least 76
+              characters where the sheet has them, and at most 100
+     --media  halfway between the two
+
+   Text, headings, lists and quotes are set on --prose. Figures and demos
+   are set on --media, and so is code, or a table, that the text's width
+   can't hold (js/blog.js says which). What is marked `wide` has --full,
+   as has code that needs it. So everything on the sheet ends on one of
+   three lines, and the steps between them are even. In the one column
+   the three stand in the middle, a wider one reaching out evenly on both
+   sides; beside the rail they share their left edge and step out to the
+   right. A word longer than its line (an address, say) breaks; it does
+   not widen the sheet. */
+.post-body {
+  --full: calc(100vw - 2 * var(--edge));
+  --prose: clamp(min(var(--full), var(--prose-min)), 0.75 * var(--full), var(--prose-max));
+  --media: calc((var(--prose) + var(--full)) / 2);
+  max-width: var(--full);
+  margin: 0 auto;
+  padding-top: var(--post-pad);
+  font-size: var(--read);
+  overflow-wrap: break-word;
+  counter-reset: figure demo;
+}
+
+.post-body > :where(h2, .post-rail), .post-body > p:is(.post-lead, .post-end), .post-text > * {
+  max-width: var(--prose);
+  margin-inline: auto;
+}
+
+.post-text > :is(figure, post-demo, [data-tier="media"]) { max-width: var(--media); }
+.post-body .post-text > :is([wide], .wide, [data-tier="full"]) { max-width: var(--full); } /* (named from the body down, to outweigh the line above) */
+
+/* (Its specs, the line that leaves it and the list of its sections are
+   set as spec lines are, a size that keeps step with the text.) */
+.post .panel-meta, .post-end .panel-link, .post-contents a { font-size: var(--read-small); }
+
+/* (The title is the list's own up to a laptop's window; past that it
+   keeps its proportion to the text, a little over twice its size.) */
+.post-body h2 {
+  font: 400 var(--read-title) / 1.15 var(--type);
+  letter-spacing: 0;
+}
+
+/* (The summary and the line that leaves the post are named from the body
+   down: as paragraphs of a panel they would take a panel's spacing.) */
+.post-lead { color: var(--ink-2); }
+.post-body > p.post-lead { margin-top: 1.4em; }
+.post-text { margin-top: 2em; }
+.post-text > * + * { margin-top: 1.4em; }
+.post-body > p.post-end { margin-top: 3.4em; padding-bottom: var(--post-foot); }
+
+/* The sections of the post, listed (js/blog.js makes the list from the
+   text's headings): a small twin of the page's index, each line a number
+   and a heading, the one being read marked as the index marks its row.
+   It is shown where the window has a column to spare for it (below). */
+.post-contents { display: none; }
+
+.post-contents-label {
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.post-contents ol { margin-top: 1em; }
+.post-contents li + li { margin-top: 0.5em; }
+
+.post-contents a {
+  display: grid;
+  grid-template-columns: 4.3em minmax(0, 1fr);
+  align-items: baseline;
+  line-height: 1.5;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+
+.post-contents-no {
+  font-size: var(--fs-label);
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.post-contents-no::after {
+  content: "->";
+  content: "->" / "";
+  display: inline-block;
+  margin-left: 0.6em;
+  clip-path: inset(0 100% 0 0);
+}
+
+.post-contents-title { display: block; }
+
+.post-contents a[aria-current] { color: var(--ink); }
+.post-contents a[aria-current] .post-contents-no::after { clip-path: inset(0); transition: clip-path 0.24s steps(2, end); }
+.post-contents a[aria-current] .post-contents-title { transform: translateX(0.5em); transition: transform 0.24s steps(1, end); }
+
+@media (hover: hover) {
+  .post-contents a:hover { color: var(--ink); }
+  .post-contents a:hover .post-contents-no::after { clip-path: inset(0); transition: clip-path 0.24s steps(2, end); }
+  .post-contents a:hover .post-contents-title { transform: translateX(0.5em); transition: transform 0.24s steps(1, end); }
+}
+
+/* A window with room to spare sets the post out across it. The title
+   runs over the whole. Under it, at the left, a rail: the specs, and the
+   list of sections; and beside the rail the post, on its three widths,
+   which here share their left edge. The rail is slim (the text has the
+   room), and where the window is wider than rail and post together need,
+   the two stand in the middle of it. A narrower window, or a phone, has
+   the one column: title, specs, text. */
+@media (min-width: 900px) {
+  .post-body {
+    --gutter: clamp(36px, 4.5vw, 96px);
+    --rail: clamp(200px, 18.5vw, 360px);
+    --full: min(100vw - 2 * var(--edge) - var(--rail) - var(--gutter), var(--prose-max) / 0.75);
+    display: grid;
+    grid-template-columns: var(--rail) var(--full);
+    grid-template-rows: auto auto auto auto 1fr; /* (the last takes up a rail longer than the text) */
+    justify-content: center;
+    column-gap: var(--gutter);
+    max-width: none;
+    margin: 0;
+  }
+
+  .post-body > h2 {
+    grid-area: 1 / 1 / 2 / -1;
+    max-width: calc(var(--rail) + var(--gutter) + var(--prose));
+    margin-inline: 0;
+    margin-bottom: clamp(26px, 5.2vh, 60px);
+    text-wrap: balance;
+  }
+
+  .post-body > .post-rail { grid-area: 2 / 1 / -1 / 2; align-self: start; max-width: none; margin-inline: 0; }
+  .post-rail .panel-meta { margin-top: 0; }
+  .post-contents:not([hidden]) { display: block; margin-top: 2.4em; }
+
+  .post-body > :is(.post-lead, .post-text, .post-end) { grid-column: 2; min-width: 0; }
+  .post-body > p:is(.post-lead, .post-end), .post-text > * { margin-inline: 0; }
+  .post-body > p.post-lead { grid-row: 2; margin-top: 0; }
+  .post-text { grid-row: 3; }
+  .post-end { grid-row: 4; }
+  .post-lead[hidden] + .post-text { margin-top: 0; }
+}
+
+/* Where the window is tall enough to hold it, the rail stays in place
+   while the text is read. (One longer than the window scrolls by itself;
+   its room at the sides is for the links' focus rings.) */
+@media (min-width: 900px) and (min-height: 500px) {
+  .post-body > .post-rail {
+    position: sticky;
+    top: calc(var(--post-pad) - 8px); /* (its first line rests where the title's stood) */
+    max-height: calc(var(--tall) - 2 * var(--line) - var(--post-pad) - 1em);
+    margin: -8px;
+    padding: 8px;
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+
+  .post-rail::-webkit-scrollbar { display: none; }
+}
+
+/* The text's own rules follow. They stop at a demo's stage: what a demo
+   puts there is its own to style, and gets from the page only what is
+   handed down (the face, the colors). Hence `:not(.demo-stage *)` on
+   every rule that would otherwise reach in. */
+.post-text :is(h3, h4, h5):not(.demo-stage *) {
+  font: 700 var(--read-head) / 1.3 var(--type);
+  letter-spacing: 0.01em;
+  text-wrap: balance;
+  scroll-margin-top: 1.6em; /* (linked to, it lands clear of the ruler) */
+}
+
+/* (A heading stands nearer the text it heads than the text it follows:
+   a little over two paragraph spaces above it, a little over half of one
+   below.) */
+.post-text h3:not(.demo-stage *) { margin-top: 2.4em; }
+.post-text :is(h4, h5):not(.demo-stage *) { margin-top: 2em; font-size: 1em; }
+.post-text :is(h3, h4, h5):not(.demo-stage *) + * { margin-top: 0.8em; }
+
+/* A section's heading carries the mark it was written with, quietly. */
+.post-text h3:not(.demo-stage *)::before { content: "# "; content: "# " / ""; font-weight: 400; color: var(--ink-3); }
+.post-text h4:not(.demo-stage *)::before { content: "## "; content: "## " / ""; font-weight: 400; color: var(--ink-3); }
+
+.post-text a:not(.demo-stage *) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.22em;
+  text-decoration-color: var(--ink-3);
+}
+
+@media (hover: hover) {
+  .post-text a:not(.demo-stage *):hover { text-decoration-color: currentColor; }
+}
+
+/* (Where the browser can, a paragraph is not left with a last line of
+   one word.) */
+.post-lead, .post-text :is(p, li):not(.demo-stage *) { text-wrap: pretty; }
+
+.post-text ul:not(.demo-stage *) { padding-left: 2.5ch; list-style: "- "; }
+.post-text ol:not(.demo-stage *) { padding-left: 4.5ch; list-style: decimal-leading-zero; }
+.post-text li:not(.demo-stage *)::marker { color: var(--ink-2); }
+.post-text li:not(.demo-stage *) + li, .post-text li:not(.demo-stage *) > :is(ul, ol) { margin-top: 0.55em; }
+.post-text li:not(.demo-stage *) > p + p { margin-top: 0.9em; }
+
+/* (A quote or a figure set inside something else has no margins of its
+   own; one that stands in the text takes its place from the widths
+   above, which this must not outweigh.) */
+:where(.post-text :is(blockquote, figure):not(.demo-stage *)) { margin-inline: 0; }
+
+.post-text blockquote:not(.demo-stage *) {
+  padding-left: 2ch;
+  border-left: 1px dashed var(--ink-3);
+  color: var(--ink-2);
+}
+
+/* (The page has one face: code, keys and samples are set in it too, not
+   in the browser's own monospace.) */
+.post-text :is(code, kbd, samp, pre):not(.demo-stage *) { font: inherit; letter-spacing: inherit; }
+
+/* (A piece of code that runs over a line's end is whole at both ends:
+   each part of it has its own ground and room.) */
+.post-text :not(pre) > code:not(.demo-stage *) {
+  padding: 0.05em 0.3em;
+  background: rgb(128 128 128 / 0.2);
+  background: color-mix(in srgb, var(--ink) 11%, transparent);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.post-text kbd:not(.demo-stage *) {
+  padding: 0 0.4em;
+  border: 1px solid var(--ink-3);
+  font-size: 0.9em;
+}
+
+/* What stands apart from the text: figures, code, tables, demos. */
+.post-text > :is(figure, .code, .table, post-demo, blockquote, hr) { margin-block: 2.3em; }
+
+/* A framed block (code, a demo) stands between two typed rules that hug
+   it, the same way at its top and its foot: the rule's dash stands as far
+   above the first line's capitals as below the last line's baseline (its
+   descenders hang into that), about 12 px at a laptop's 16.5 px text. In
+   Lekton the dash sits just under the middle of its 9 px row; capitals
+   start 0.30 em into a line set 1.4 apart, 0.40 em into one set 1.6
+   apart; and a baseline stands 0.54 em above the foot of a line set 1.6
+   apart. So a last line's own leading holds the rule below at that
+   distance, with no margin, and the margins above are what it takes for
+   the first line's capitals to match.
+
+   Code, its language named on a line of its own above it (as a demo's
+   name is), set a size under the text. It scrolls sideways by itself;
+   the text never does. (Named from the text down, to outweigh the rule
+   above that hands code the page's face.) */
+.post-text .code > pre {
+  margin: 0;
+  padding: 0.19em 0 0;
+  overflow-x: auto;
+  font: 400 var(--read-small) / 1.6 var(--type);
+  letter-spacing: 0;
+  tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-3) transparent;
+}
+
+.code-lang {
+  display: block;
+  margin-top: 0.35em;
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.post-text .code > .code-lang + pre { padding-top: 0.8em; }
+
+/* A picture is never wider than the text it is in. */
+.post-text :is(img, svg, video, canvas, iframe):not(.demo-stage *) { max-width: 100%; }
+.post-text :is(img, video):not(.demo-stage *) { height: auto; }
+
+/* A figure, numbered as it comes. */
+.post-text figure:not(.demo-stage *) { counter-increment: figure; }
+.post-text figure:not(.demo-stage *) > :is(img, svg, video, canvas) { display: block; width: 100%; height: auto; }
+
+/* (A caption is text: under a wide thing it keeps a line a reader can
+   follow, 90 of its smaller characters at most.) */
+.post-text figcaption:not(.demo-stage *), .demo-caption {
+  max-width: 45em;
+  font-size: var(--read-small);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+}
+
+/* (Under a figure that reaches out on both sides, in the one column, the
+   caption starts where the text does.) */
+.post-text figcaption:not(.demo-stage *) { margin-top: 1em; margin-left: max(0px, (100% - var(--prose)) / 2); }
+
+.post-text figcaption:not(.demo-stage *)::before {
+  content: "Fig. " counter(figure, decimal-leading-zero) "   ";
+  font-size: var(--fs-label);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: pre;
+  color: var(--ink-3);
+}
+
+.table { overflow-x: auto; scrollbar-width: thin; scrollbar-color: var(--ink-3) transparent; }
+
+.post-text table:not(.demo-stage *) {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--read-small);
+  line-height: 1.6;
+  letter-spacing: 0.02em;
+}
+
+.post-text th:not(.demo-stage *) {
+  padding: 0 2em 0.7em 0;
+  border-bottom: 1px dashed var(--ink-3);
+  font-weight: 400;
+  font-size: var(--fs-label);
+  letter-spacing: 0.12em;
+  text-align: left;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.post-text td:not(.demo-stage *) {
+  padding: 0.7em 2em 0.7em 0;
+  border-bottom: 1px dashed var(--ink-3);
+  vertical-align: top;
+}
+
+.post-text hr:not(.demo-stage *) { height: var(--cell-h); border: 0; overflow: hidden; }
+.post-text [tabindex="-1"]:not(.demo-stage *) { outline: none; } /* (a place a link in the post went to: focused, as a panel's heading is, not marked) */
+.post-missing { color: var(--ink-2); }
+
+/* A demo: a frame for a live thing a post brings with it (js/blog.js
+   loads the post's own module into the stage). Named and numbered above,
+   captioned below, between typed rules. A finger on the stage still
+   scrolls the sheet (touch-action), and the controls a demo adds take the
+   page's look from here, so that a post need not style them. */
+post-demo { display: block; counter-increment: demo; }
+
+.demo-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 2em;
+  margin: 0.35em 0 1.2em; /* (its rule above: see A framed block, under Code) */
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+.demo-name::before {
+  content: "Demo " counter(demo, decimal-leading-zero) "  /  ";
+  white-space: pre;
+  color: var(--ink-3);
+}
+
+.demo-state:not(:empty) { animation: wait 0.8s steps(1) infinite; }
+.demo-stage { min-height: 6em; touch-action: pan-y; }
+.demo-caption { margin-top: 1.2em; }
+.demo-stage:last-child { margin-bottom: 0.45em; } /* (a demo without a caption keeps its distance from the rule below) */
+/* (One that ends on the page's own controls is held by their baseline, as
+   text is: they stand in rows tall enough for a finger, their type in the
+   middle, 0.94 em over the row's foot.) */
+.demo-stage:last-child:has(> .demo-controls:last-child) { margin-bottom: calc(0.45em - 0.94 * var(--fs-label)); }
+
+.demo-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9em 2.4em;
+  margin-top: 1.3em;
+  font-size: var(--fs-label);
+  line-height: 1.4;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.demo-controls label { display: inline-flex; align-items: center; gap: 0.9em; color: var(--ink-2); }
+.demo-controls button { min-width: 5.5em; min-height: 2.4em; text-align: left; } /* (tall enough for a finger, as the sliders are) */
+.demo-controls button::before { content: "[ "; content: "[ " / ""; white-space: pre; color: var(--ink-3); }
+.demo-controls button::after  { content: " ]"; content: " ]" / ""; white-space: pre; color: var(--ink-3); }
+
+/* A slider is a short ruler with a caret on it, as the page's rulers
+   carry the pointer's: a line of dashes a cell apart, and a cell of ink
+   that rides it. (Tall enough for a finger; the dashes are drawn, since a
+   control's parts can't hold text.) */
+:where(.demo-stage) :is(input, select, textarea) { font: inherit; letter-spacing: inherit; color: inherit; }
+
+.demo-controls input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: calc(18 * var(--cell-w));
+  height: 2.4em;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+
+.demo-controls input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--cell-h);
+  background: repeating-linear-gradient(90deg, transparent 0 1.5px, var(--ink-2) 1.5px 5.5px, transparent 5.5px var(--cell-w)) left center / 100% 1px no-repeat;
+}
+
+.demo-controls input[type="range"]::-moz-range-track {
+  height: var(--cell-h);
+  background: repeating-linear-gradient(90deg, transparent 0 1.5px, var(--ink-2) 1.5px 5.5px, transparent 5.5px var(--cell-w)) left center / 100% 1px no-repeat;
+}
+
+.demo-controls input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: var(--cell-w);
+  height: calc(var(--cell-h) + 6px);
+  margin-top: -3px;
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+}
+
+.demo-controls input[type="range"]::-moz-range-thumb {
+  width: var(--cell-w);
+  height: calc(var(--cell-h) + 6px);
+  border: 0;
+  border-radius: 0;
+  background: var(--ink);
+}
+
+@media (hover: hover) {
+  .demo-controls button:hover::before, .demo-controls button:hover::after { color: currentColor; }
+}
+
+@media (min-width: 900px) {
+  /* (A heading gone to from the list of sections lands level with the rail's top.) */
+  .post-text :is(h3, h4, h5):not(.demo-stage *) { scroll-margin-top: var(--post-pad); }
+
+  /* (Beside the rail a figure starts where the text does, and so does its caption.) */
+  .post-text figcaption:not(.demo-stage *) { margin-left: 0; }
+}
+
+/* A post's text arrives as a panel's does: its first blocks print a line
+   at a time (js/main.js marks them .prints, with --lines and --delay);
+   the rest, further down, is there already. (An animation, not a clip
+   that stays: a demo's controls keep their focus rings.) */
+.post.is-open:not(.is-veiled) .prints {
+  animation: print calc(var(--lines, 1) * 40ms) steps(var(--lines, 1), end) var(--delay, 0s) backwards;
+}
+
+@keyframes print {
+  from { clip-path: inset(0 0 100% 0); }
+  to   { clip-path: inset(0); }
+}
+
+/* --------------------------------------------------------------------------
+   Cursor: a ring typed in characters (js/cursor.js draws and moves it), in
+   the rulers' type. Its block of 15 × 13 cells is centered on the pointer;
+   each of the ring's characters is set in a cell of paper, so that over the
+   band the ring cuts a clean circle through the band's own characters (on
+   paper, it is the characters alone).
    -------------------------------------------------------------------------- */
 
 .cursor {
   position: fixed;
   z-index: 100;
-  top: -18px;
-  left: -18px;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+  top: calc(-6.5 * var(--cell-h));
+  left: calc(-7.5 * var(--cell-w));
+  font: 700 9px / var(--cell-h) var(--type); /* (bold: a shade over the band's own) */
+  letter-spacing: var(--typed-track);
+  white-space: pre;
+  color: var(--ink);
   pointer-events: none;
-  will-change: transform;
-  -webkit-backdrop-filter: invert(1);
-  backdrop-filter: invert(1);
+  will-change: transform; /* (smoothed in grays, see .name-art) */
 }
 
-@supports not ((backdrop-filter: invert(1)) or (-webkit-backdrop-filter: invert(1))) {
-  .cursor { border: 1px solid var(--ink); }
+.cursor i {
+  display: inline-block;
+  width: var(--cell-w);
+  height: var(--cell-h);
+  padding-left: calc(var(--typed-track) / 2); /* centered in its cell */
+  vertical-align: top;
+  font-style: normal;
+  background: var(--bg);
 }
+
+/* Over a link or reading text, the ring's characters are set over the
+   words without blanking them out; so is any one of them that lies over a
+   word on the band, or off the band (.bare, js/cursor.js). */
+.cursor:is([data-state="link"], [data-state="text"]) i,
+.cursor i.bare { background: none; }
+
+/* (Every cell of the block is there; those the ring is not in are hidden,
+   each keeping a character's room.) */
+.cursor i.off { visibility: hidden; }
 
 .is-sweeping .cursor { visibility: hidden; }
 
@@ -698,20 +1468,23 @@ type-key.is-struck { visibility: inherit; }
    the band opens between them; the type arrives last.
    -------------------------------------------------------------------------- */
 
-/* The line draws out (scale) and the axes part (translate) as separate
-   transitions, so the parting starts fresh, on the same frame as the
-   shutters below. */
-.intro .axis-top    { translate: 0 calc(var(--mid) - var(--line)); scale: 0 1; }
-.intro .axis-bottom { translate: 0 calc(var(--line) - var(--mid)); scale: 0 1; }
+/* The two rulers start as one, across the middle: they type out from its
+   center (clipped) and part (translate) as separate transitions, so the
+   parting starts fresh, on the same frame as the shutters below. */
+.intro .axis-top    { translate: 0 calc(var(--mid) - var(--line) + var(--ov-top) + var(--cell-h) / 2); }
+.intro .axis-bottom { translate: 0 calc(var(--line) - var(--mid) - var(--ov-bottom) - var(--cell-h) / 2); }
+.intro .axis::before { clip-path: inset(0 50%); }
 
-.intro-draw :is(.axis-top, .axis-bottom) {
-  scale: none;
-  transition: scale 0.8s var(--ease-out);
+.intro-draw .axis::before {
+  clip-path: inset(0);
+  transition: clip-path 0.7s var(--draw-ease, var(--ease-out));
 }
 
+/* (Both move a whole character at a time: --draw-ease and --part-ease are
+   stairs, on curves that keep the steps in rhythm, js/frame.js.) */
 .intro-open :is(.axis-top, .axis-bottom) {
   translate: none;
-  transition: scale 0.8s var(--ease-out), translate 1.2s var(--ease-in-out);
+  transition: translate 1s var(--part-ease, var(--ease-in-out));
 }
 
 /* The band opens behind two shutters, halves of paper that part with the
@@ -721,6 +1494,7 @@ type-key.is-struck { visibility: inherit; }
 .band::before, .band::after {
   content: "";
   position: absolute;
+  z-index: 1; /* over the background's canvases */
   left: 0;
   right: 0;
   height: calc(50% - 1px);
@@ -734,39 +1508,50 @@ type-key.is-struck { visibility: inherit; }
 
 .intro-open .band::before { transform: translateY(-100%); }
 .intro-open .band::after  { transform: translateY(100%); }
-.intro-open .band::before, .intro-open .band::after { transition: transform 1.2s var(--ease-in-out); }
+.intro-open .band::before, .intro-open .band::after { transition: transform 1s var(--part-ease, var(--ease-in-out)); }
 
 .intro .name { visibility: hidden; } /* typed in as the intro ends */
 
-/* (The footer's controls are named, not `.footer > *`: a class change on
-   <body> then restyles just them, not the whole page.) */
-.nav, .status, .theme, .readout {
-  transition: opacity 1s var(--ease-out) 0.35s, transform 1.2s var(--ease-out) 0.35s, color 0.4s ease;
-}
-
-.intro :is(.nav, .status, .theme, .readout, .about) {
-  opacity: 0;
-  transform: translateY(8px);
-}
+/* The frame's labels type themselves in as the intro ends (js/main.js).
+   (They are named, not `.footer > *`: a class change on <body> then
+   restyles just them, not the whole page.) */
+.intro :is(.nav, .mode, .theme, .readout, .about) { visibility: hidden; }
 
 /* --------------------------------------------------------------------------
-   Theme sweep (View Transitions): the new palette rises from the bottom axis
+   Theme (a view transition): the new palette is typed over the old in a
+   wave of characters that spreads from the switch (js/main.js, js/wave.js)
    -------------------------------------------------------------------------- */
 
+/* The browser holds the page as it was, and over it the page as it now is,
+   which shows through a round opening that js/main.js grows from the
+   switch (nothing of it until then). Neither fades. */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
 }
 
-::view-transition-new(root) {
-  animation: sweep 0.95s var(--ease-in-out) both;
+::view-transition-new(root) { clip-path: circle(0px at 50% 50%); }
+
+/* The wave: a canvas over the whole page, whose cells (each a character on
+   paper while it turns over) lie over the opening's edge. It is shown
+   apart from the page while the theme changes, above the old page and the
+   new, as it is drawn. */
+.wave {
+  position: fixed;
+  z-index: 200;
+  pointer-events: none;
+  view-transition-name: wave;
 }
 
-@keyframes sweep {
-  from { clip-path: inset(calc(100% - var(--line)) 0 var(--line) 0); }
-  to   { clip-path: inset(0); }
-}
+::view-transition-new(wave) { animation: none; }
+::view-transition-old(wave) { display: none; }
+
+/* The change is drawn over the page, and would take every click while it
+   runs: let them through to the page, which is live beneath it. (Where
+   the browser hands them to the root all the same, js/main.js passes them
+   on.) */
+::view-transition { pointer-events: none; }
 
 /* For the instant the palette switches (js/main.js setTheme). */
 .is-retheming *, .is-retheming *::before, .is-retheming *::after { transition: none !important; }
@@ -777,10 +1562,7 @@ type-key.is-struck { visibility: inherit; }
 
 /* Touch screens show the readout and carets only while a finger probes. */
 @media (hover: none) {
-  .readout {
-    opacity: 0;
-    transition: opacity 0.3s ease;
-  }
+  .readout { opacity: 0; }
   .is-probing .readout { opacity: 1; }
 }
 
@@ -797,40 +1579,80 @@ type-key.is-struck { visibility: inherit; }
 
   .panel {
     z-index: 50;
+    width: var(--panel-w); /* (the whole width: no edge to set on a column) */
     border-left: 0;
-    transform: translateY(100%);
   }
 
   .panel.is-open { z-index: 51; }
+  .wipe { z-index: 52; } /* (over the sheets, which cover the frame) */
 
   .panel-top, .panel-steps { left: var(--edge); right: var(--edge); justify-content: space-between; }
-  .panel-top { bottom: auto; top: calc(var(--line) - var(--gap) - 1.4em); }
+  .panel-top { bottom: auto; top: calc(var(--line) - var(--gap) - var(--cell-h) / 2 - var(--ov-top) - 1.4em); }
   .panel-scroll {
     padding-left: var(--edge);
     padding-right: var(--edge);
     border-top: 1px solid var(--ink);
     border-bottom: 1px solid var(--ink);
   }
+
+  /* A sheet covers the rulers, so it types its own where they run (unread:
+     where the browser can't keep generated text from being read, the sheet
+     keeps its lines). It has no edge to type. */
+  @supports (content: "" / "") {
+    .panel-scroll { border: 0; }
+
+    .panel::before, .panel::after {
+      content: var(--ruler) / "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      width: auto;
+      height: var(--cell-h);
+      padding-left: 0;
+      overflow: hidden;
+      font: var(--typed-weight) 9px / var(--cell-h) var(--type);
+      letter-spacing: var(--typed-track);
+      text-indent: calc(var(--grid-x) + var(--typed-track) / 2);
+      white-space: pre;
+    }
+
+    .panel::before { top: calc(var(--line) - var(--ov-top) - var(--cell-h)); }
+    .panel::after  { bottom: calc(var(--line) - var(--ov-bottom) - var(--cell-h)); }
+  }
 }
 
-/* Phones: controls stack in their corners. */
+/* Phones. */
 @media (max-width: 720px) {
   :root { --fs-title: clamp(1.5rem, 6.2vw, 2rem); }
 
-  .nav, .theme {
+  .row-link { grid-template-columns: 2.9em 1fr; }
+  .row-no::after { display: none; }
+}
+
+/* Phones held upright: controls stack in their corners. (On its side a
+   phone has the width for rows, and no height under the axis for stacks.) */
+@media (max-width: 720px) and (orientation: portrait) {
+  .nav, .mode, .theme {
     flex-direction: column;
-    align-items: flex-end;
     gap: max(0.7em, 12px); /* room for the 24px touch targets */
   }
 
+  .nav, .theme { align-items: flex-end; }
   .theme { flex-direction: column-reverse; }
 
-  .nav a::before, .theme button::before { left: auto; right: calc(var(--chip-x) - 1.1em); }
+  /* Three links above the axis: on a short screen their rows close up to
+     fit, as the backgrounds' do below. */
+  .nav { gap: clamp(2px, (var(--line) - var(--gap) - var(--cell-h) / 2 - var(--ov-top) - 4.2em - 8px) / 2, max(0.7em, 12px)); }
 
-  .status { display: none; }
+  /* Three backgrounds, where the themes are two: on a short screen their
+     rows close up to fit under the axis (4.2em: three lines of type). */
+  .mode {
+    align-items: flex-start;
+    gap: clamp(4px, (var(--line) - var(--gap) - var(--cell-h) / 2 - var(--ov-bottom) - 4.2em - 8px) / 2, max(0.7em, 12px));
+  }
 
-  .row-link { grid-template-columns: 2.9em 1fr; }
-  .row-no::after { display: none; }
+  /* Brackets close up against their labels, to keep inside the edges. */
+  :is(.nav a, .mode button, .theme button) { --bracket: 0.62em; }
 }
 
 /* The narrowest phones: the caption still sets as four lines. */

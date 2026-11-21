@@ -1,0 +1,82 @@
+/* The charts of blog/no-limit-pokerbot-recap/post.md, linked from its
+   first figure. Drawn in the page's own ink: durrrr in full ink, the bots
+   it is set against in the second and third. Every value is also written
+   out, beside its mark or under Numbers. Every class starts with nl-, so
+   nothing else on the page is touched. */
+.nl-chart { --grid: color-mix(in srgb, var(--ink) 15%, var(--bg)); font-size: var(--read-small); line-height: 1.45; }
+.nl-us { --c: var(--ink); }
+.nl-top { --c: var(--ink-2); }
+.nl-field { --c: var(--ink-3); }
+.nl-label { font-size: var(--fs-label); line-height: 1.4; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.nl-label.is-ink { color: var(--ink); }
+.nl-v { font-size: var(--fs-label); letter-spacing: 0.04em; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nl-legend { display: flex; flex-wrap: wrap; gap: 0.5em 2em; margin-bottom: 1.6em; }
+.nl-key { display: inline-flex; align-items: center; gap: 0.7em; }
+.nl-key::before { content: ""; flex: none; width: 0.8em; height: 0.8em; border-radius: 2px; background: var(--c); }
+.nl-key.is-line::before { width: 1.6em; height: 2px; border-radius: 1px; }
+.nl-key.is-dot::before { width: 0.75em; height: 0.75em; border-radius: 50%; }
+.nl-axis-title { margin: 0.6em 0 0; text-align: center; }
+
+/* Hover: the mark answers, and a note gives its value first. (Everything
+   in a note is also under Numbers.) */
+.nl-tip:hover::after {
+  content: attr(data-tip); position: absolute; z-index: 3; left: 50%; bottom: calc(100% + 0.7em); transform: translateX(-50%);
+  padding: 0.25em 0.6em; white-space: nowrap; pointer-events: none;
+  font-size: var(--fs-label); letter-spacing: 0.04em; text-transform: none; color: var(--ink); background: var(--bg); border: 1px solid var(--ink-3);
+}
+:is(.nl-col, .nl-bar, .nl-dot).nl-tip:hover { outline: 1px solid var(--ink); outline-offset: 1px; }
+
+/* Columns, one small chart for each, on one scale. */
+.nl-multiples { display: grid; grid-template-columns: repeat(auto-fit, minmax(12em, 1fr)); gap: 2.2em 2.6em; }
+.nl-panel > .nl-title { display: block; margin-bottom: 1.5em; }
+.nl-cols { position: relative; display: flex; align-items: flex-end; justify-content: space-around; gap: 2px; height: 7.5em; margin-left: 2.8em; border-bottom: 1px solid var(--ink-3); }
+.nl-gl { position: absolute; left: 0; right: 0; bottom: calc(var(--v) / var(--max, 100) * 100%); border-top: 1px solid var(--grid); }
+.nl-gl > span { position: absolute; right: calc(100% + 0.7em); top: 0; transform: translateY(-50%); font-size: var(--fs-label); color: var(--ink-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nl-col { position: relative; flex: 0 1 22px; min-width: 5px; height: calc(var(--v) / var(--max) * 100%); background: var(--c); border-radius: 4px 4px 0 0; }
+.nl-col > .nl-v { position: absolute; left: 50%; bottom: 100%; transform: translateX(-50%); margin-bottom: 0.3em; }
+.nl-places { display: flex; justify-content: space-around; gap: 2px; margin: 0.5em 0 0 2.8em; }
+.nl-places > span { flex: 0 1 22px; min-width: 5px; text-align: center; }
+
+/* Lines over hands, a hairline that finds the hand under the pointer. */
+.nl-lines { position: relative; height: 13em; margin-left: 2.8em; border-bottom: 1px solid var(--ink-3); }
+.nl-lines > svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.nl-lines polyline { fill: none; stroke: var(--c); stroke-width: 2px; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.nl-x { position: absolute; top: 0; bottom: 0; left: calc((var(--x) - 5) / 160 * 100%); width: calc(10 / 160 * 100%); }
+.nl-x:hover::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; border-left: 1px solid var(--ink-2); }
+.nl-x.nl-tip:hover::after { bottom: auto; top: 0; transform: translate(-50%, -110%); }
+.nl-x.is-late.nl-tip:hover::after { left: auto; right: 50%; transform: translateY(-110%); }
+.nl-hands { position: relative; height: 1.4em; margin: 0.5em 0 0 2.8em; }
+.nl-hands > span { position: absolute; left: calc(var(--x) / 160 * 100%); transform: translateX(-50%); }
+
+/* Rows: a name, a bar on a track, a figure. */
+.nl-rows { display: grid; grid-template-columns: max-content minmax(6em, 1fr) max-content; align-items: center; gap: 0.75em 1.2em; }
+.nl-rows.is-two { grid-template-columns: max-content minmax(8em, 1fr); }
+.nl-name { color: var(--ink); }
+.nl-num { text-align: right; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.nl-rows > .nl-label.nl-num { color: var(--ink-2); }
+.nl-track { position: relative; height: 0.85em; }
+.nl-zero { position: absolute; top: -0.45em; bottom: -0.45em; left: var(--z); border-left: 1px solid var(--ink-3); }
+.nl-bar { position: absolute; top: 0; bottom: 0; background: var(--c, var(--ink)); }
+.nl-bar.is-pos { left: var(--z); width: calc(var(--w) * 1%); border-radius: 0 4px 4px 0; }
+.nl-bar.is-neg { right: calc(100% - var(--z)); width: calc(var(--w) * 1%); border-radius: 4px 0 0 4px; }
+.nl-bar.is-rank { left: 0; width: calc(var(--w) * 1%); border-radius: 0 4px 4px 0; }
+.nl-bar > .nl-v { position: absolute; top: 50%; left: calc(100% + 0.5em); transform: translateY(-50%); }
+
+/* Two dots on a line: what was assumed, what was so. */
+.nl-track.is-dumb { margin-left: 3.4em; height: 1.4em; background: repeating-linear-gradient(90deg, var(--grid) 0 1px, transparent 1px 22.2222%); } /* a line every 10% on a 0-45% scale */
+.nl-link { position: absolute; top: 50%; height: 2px; transform: translateY(-50%); left: calc(var(--lo) * 1%); width: calc((var(--hi) - var(--lo)) * 1%); background: var(--ink-3); }
+.nl-dot { position: absolute; top: 50%; left: calc(var(--x) * 1%); width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); background: var(--c); box-shadow: 0 0 0 2px var(--bg); }
+.nl-dot > .nl-v { position: absolute; top: 50%; transform: translateY(-50%); }
+.nl-dot.is-left > .nl-v { right: calc(100% + 0.55em); }
+.nl-dot.is-right > .nl-v { left: calc(100% + 0.55em); }
+.nl-ticks { position: relative; display: block; height: 1.4em; margin-left: 3.4em; }
+.nl-ticks > span { position: absolute; left: calc(var(--x) * 1%); transform: translateX(-50%); }
+
+/* Under each chart, its numbers as a table, for any reader who wants them. */
+.nl-data { margin-top: 1.5em; }
+.nl-data > summary { display: inline-block; cursor: pointer; list-style: none; font-size: var(--fs-label); letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.nl-data > summary::-webkit-details-marker { display: none; }
+.nl-data > summary::before { content: "[ "; content: "[ " / ""; white-space: pre; color: var(--ink-3); }
+.nl-data > summary::after { content: " ]"; content: " ]" / ""; white-space: pre; color: var(--ink-3); }
+.nl-data[open] > summary, .nl-data > summary:hover { color: var(--ink); }
+.nl-data .table { margin-top: 1em; }

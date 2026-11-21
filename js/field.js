@@ -4,6 +4,8 @@
    between framings (an edge-on line, an oblique landscape, a top-down
    texture, a calm overview); the pointer lifts the surface under it and
    clicks send ripples through it. Plain WebGL: one program, one draw call.
+   It is the first of the band's backgrounds: js/background.js switches
+   between them, and mount() (at the end) gives it their common interface.
    ========================================================================== */
 
 /* The plane, in world units: x across (±halfWidth), y into the distance
@@ -25,12 +27,48 @@ const SHOTS = {
 };
 const CAMERA_KEYS = Object.keys(SHOTS.line);
 
-/* How fast each property chases its target (1/s, exponential approach). */
+/* How fast each property chases its target (1/s, exponential approach).
+   A framing's own (camera, amplitude, opacity, seed) glide in two stages:
+   each chases a lead that chases the target, both EASE times as fast, so
+   that the glide sets off from rest and comes to rest (a single stage sets
+   off at its fastest, with a jolt) in about the time one stage would take
+   at the rate given. The pointer's follow at once. */
 const RATE = { camera: 1.9, amplitude: 2.2, opacity: 3.2, seed: 1.6, pointer: 9, strength: 4 };
+export const EASE = 1.6;
 const WAVE_SPEED = 0.42; // noise time units per second
 const RIPPLES = 4;
 
-const INK = { dark: [0.91, 0.91, 0.91], light: [0.09, 0.09, 0.09] };
+/* Rows of the plane that cannot be in sight are not drawn (see rowsInSight):
+   seen from above, under the lists and the panels, that is about half of
+   them. What "cannot" rests on: the most the surface can rise or sink.
+   The wave is a product of two noises, each within ±NOISE_MOST (classic
+   2D Perlin noise is within ±0.7071 for gradients of length 1; these are
+   at most 0.79 long, and the result is scaled 2.3: 1.285), which the
+   shader maps to at most 2 + 32 and 2 + 27 times that, times 0.06; the
+   pointer lifts it LIFT at most and each ripple RING at its start. A row
+   counts as in sight until it lands more than SIGHT_MARGIN of the band's
+   half-height from its middle, that is 15% of a half-height past an edge
+   (a point is far smaller than that), and half a row is allowed either
+   side of it for the points' own scatter. */
+const NOISE_MOST = 1.3;
+const WAVE_MOST = 0.06 * (2 + 32 * NOISE_MOST) * (2 + 27 * NOISE_MOST);
+const LIFT = 9;
+const RING = 14;
+const RIPPLE_LIFE = 3.2;   // s
+const RIPPLE_FADE = 1.25;  // 1/s
+const SIGHT_MARGIN = 1.15;
+
+/* The ink of each theme (main.css --ink); the other backgrounds draw in it too. */
+export const INK = { dark: [0.91, 0.91, 0.91], light: [0.09, 0.09, 0.09] };
+
+/* Frames from the browser, unless the page hands out its own (the typed
+   screen, js/ascii.js, runs every background's frames in its loop and
+   wants to know when each has drawn, and at what opacity: drawn(opacity)). */
+export const FRAMES = {
+  request: (callback) => requestAnimationFrame(callback),
+  cancel: (id) => cancelAnimationFrame(id),
+  drawn() {},
+};
 
 const NOISE_GLSL = `
 vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -91,10 +129,13 @@ uniform float uAmplitude;
 uniform vec2 uSeed;
 uniform vec3 uPointer;            // x, y (CSS px), strength
 uniform vec4 uRipples[${RIPPLES}];        // x, y (CSS px), start (s), strength
+uniform float uTyped;             // 1 while drawn as a picture for the typed screen
+uniform vec2 uSplat;              // typed: the share of its area a point carries as light, and its splat's reach (px)
 
 varying float vHeight;
 varying float vLight;
 varying float vFade;
+varying float vSplat;             // typed: the light the point carries (its area, px^2); else 0
 
 ${NOISE_GLSL}
 
@@ -121,22 +162,26 @@ void main() {
   for (int i = 0; i < ${RIPPLES}; i++) {
     vec4 r = uRipples[i];
     float age = uClock - r.z;
-    if (r.w > 0.0 && age > 0.0 && age < 3.2) {
+    if (r.w > 0.0 && age > 0.0 && age < ${RIPPLE_LIFE}) {
       float front = distance(screen, r.xy) - age * 330.0;
-      ring += r.w * exp(-front * front / 1700.0) * exp(-age * 1.25);
+      ring += r.w * exp(-front * front / 1700.0) * exp(-age * ${RIPPLE_FADE});
     }
   }
 
-  float h = wave(p, uTime, uSeed) * uAmplitude + lift * 9.0 + ring * 14.0;
+  float h = wave(p, uTime, uSeed) * uAmplitude + lift * ${LIFT.toFixed(1)} + ring * ${RING.toFixed(1)};
   vec4 view = uModelView * vec4(p, h, 1.0);
   gl_Position = uProjection * view;
-  gl_PointSize = uSize * uPixelRatio * (uDistance / -view.z) * (1.0 + 0.4 * lift);
+  float size = uSize * uPixelRatio * (uDistance / -view.z) * (1.0 + 0.4 * lift);
+  gl_PointSize = uTyped > 0.5 ? 2.0 * uSplat.y : size;
+  vSplat = uTyped * size * size * uSplat.x / (uSplat.y * uSplat.y);
 
   // Haze dims the distance, and points quieten near the band's bottom and
   // top edges so the field settles against the axes; nothing fades out.
+  // (Typed, the screen settles the picture itself, and its far points thin
+  // out instead: a little haze is all that takes. See js/ascii.js.)
   float sy = gl_Position.y / gl_Position.w;
-  float edges = mix(0.3, 1.0, smoothstep(-1.0, -0.45, sy)) * mix(0.5, 1.0, smoothstep(1.0, 0.8, sy));
-  float haze = mix(1.0, 0.5, smoothstep(1.0, 1.7, -view.z / uDistance));
+  float edges = uTyped > 0.5 ? 1.0 : mix(0.3, 1.0, smoothstep(-1.0, -0.45, sy)) * mix(0.5, 1.0, smoothstep(1.0, 0.8, sy));
+  float haze = mix(1.0, uTyped > 0.5 ? 0.88 : 0.5, smoothstep(1.0, 1.7, -view.z / uDistance));
   vHeight = h;
   vLight = 0.5 * lift + 1.4 * ring;
   vFade = edges * haze;
@@ -156,9 +201,20 @@ uniform float uOpacity;
 varying float vHeight;
 varying float vLight;
 varying float vFade;
+varying float vSplat;
 
 void main() {
   float disc = 1.0 - smoothstep(0.3, 0.5, length(gl_PointCoord - 0.5));
+  // Typed (js/ascii.js), the picture is small, a pixel or two to a point:
+  // snapped whole to its pixels, the plane's lattice of points beats against
+  // them in fixed fans of bands. Instead each point is a 2 x 2 px splat that
+  // shares its light (its area) out by distance, so it lands where it is to
+  // a fraction of a pixel, and the splats add up (see draw). (Wider on the
+  // light grid, where the points lie further apart: see useGrid.)
+  if (vSplat > 0.0) {
+    vec2 d = abs(gl_PointCoord * 2.0 - 1.0);
+    disc = (1.0 - d.x) * (1.0 - d.y) * vSplat;
+  }
   // Brighter where the surface rises toward the camera.
   float a = mix(0.1, 1.0, smoothstep(-8.0, 34.0, vHeight));
   a = min(a * 1.15 + 0.4 * vLight, 1.0) * disc * vFade * uOpacity;
@@ -168,8 +224,13 @@ void main() {
 
 /** Starts the field on `canvas`. Returns a controller; `ready` resolves
     once the first frame has been through the GPU, so whatever it builds on
-    first use is built before anything moves (right away without WebGL). */
-export function createField(canvas, { theme = "dark", still = false, dense = true } = {}) {
+    first use is built before anything moves (right away without WebGL).
+    `frames` replaces the browser's frames (see FRAMES). `typed()` says,
+    while the page sets the field in characters (js/ascii.js), how: as
+    { scale, cell, origin, cols, rows }, where `scale` is the canvas's
+    pixels per CSS px in place of the device's (the picture is drawn small)
+    and the rest is the grid of characters (see layout there). */
+export function createField(canvas, { theme = "dark", still = false, dense = true, onError = () => {}, frames = FRAMES, typed } = {}) {
   const gl = canvas && canvas.getContext("webgl", {
     alpha: true,
     premultipliedAlpha: true,
@@ -178,7 +239,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     stencil: false,
   });
   const noop = () => {};
-  if (!gl) return { ready: Promise.resolve(), pause: noop, set: noop, setTheme: noop, pointer: noop, ripple: noop, sample: () => null, stats: () => null };
+  if (!gl) return { ready: Promise.resolve(), pause: noop, set: noop, setTheme: noop, pointer: noop, ripple: noop, sample: () => null, resize: noop, destroy: noop };
 
   // Bands wider than 2.6:1 (ultrawide screens) see more of the plane's
   // sides; `spread` widens it to match, adding columns to keep the density.
@@ -188,12 +249,18 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   // Point density (about one point per 1.17 × 1 world units when dense):
   // the light grid serves small screens, and any device that cannot hold the
   // dense one at a smooth frame rate (see watchFrameRate).
-  let grid, count, pointSize;
+  // Typed, a point is a splat that carries its area as light (see the
+  // shaders). The light grid has a quarter of the points, twice as far
+  // apart: each then carries the light of the four it stands for, and its
+  // splat reaches twice as far, so that the picture is as bright and as
+  // even as the dense grid's (`splat`: that share, and that reach).
+  let grid, count, pointSize, splat;
   const useGrid = (isDense) => {
     dense = isDense;
     grid = { cols: Math.round((dense ? 686 : 343) * spread), rows: dense ? 540 : 270 };
     count = (grid.cols + 1) * (grid.rows + 1);
     pointSize = dense ? 2.0 : 2.6;
+    splat = dense ? [1, 1] : [4 * (2.0 / 2.6) ** 2, 2];
   };
   useGrid(dense);
 
@@ -201,6 +268,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   const camera = { ...SHOTS.line };
   const goal = { camera: { ...SHOTS.line }, amplitude: 0, opacity: 0, seed: [0, 0] };
   const now = { amplitude: 0, opacity: 0, seed: [0, 0] };
+  const lead = { camera: { ...SHOTS.line }, amplitude: 0, opacity: 0, seed: [0, 0] }; // what each of those chases (see RATE)
   const pointer = { x: -1e4, y: -1e4, tx: -1e4, ty: -1e4, strength: 0, target: 0 };
   const ripples = new Float32Array(RIPPLES * 4);
   let rippleNext = 0;
@@ -212,23 +280,26 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   let time = 7.3;   // wave time (starts mid-swell)
   let clock = 0;    // real seconds since start
   let last = 0;
-  let frames = 0;
+  let drawCount = 0; // frames drawn
   let warming = 2;  // frames to wait after the first draw before `ready`
 
   /* --- GL resources, rebuilt if the context is lost and restored. */
   let u = null;          // uniform locations, once the program has linked
   let pending = null;    // { program, done } while the shaders compile
+  let buffer = null;
+  let pipeline = null;   // includes shaders, even before the first draw
 
   function init() {
     u = null;
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     uploadGrid();
     gl.enableVertexAttribArray(0);
     gl.vertexAttribPointer(0, 2, gl.FLOAT, false, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA); // premultiplied output
     gl.clearColor(0, 0, 0, 0);
-    pending = compile(gl, VERTEX_SHADER, FRAGMENT_SHADER);
+    pending = pipeline = compile(gl, VERTEX_SHADER, FRAGMENT_SHADER);
   }
 
   /** One vertex per grid point: (column, row). */
@@ -245,6 +316,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     gl.uniform2f(u.uGrid, grid.cols, grid.rows);
     gl.uniform1f(u.uSize, pointSize);
     gl.uniform1f(u.uSpread, spread);
+    gl.uniform2f(u.uSplat, splat[0], splat[1]);
   }
 
   /* Step down to the light grid if the dense one can't hold ~40 fps. Judged
@@ -271,10 +343,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     try {
       program = pending.check();
     } catch (error) {
-      // A GPU that can't build the shaders just shows no field.
-      console.warn("Particle field disabled:", error.message);
-      broken = true;
-      firstFrame();
+      stopped(error);
       return false;
     } finally {
       pending = null;
@@ -282,7 +351,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     gl.useProgram(program);
     u = {};
     for (const name of ["uGrid", "uSpread", "uModelView", "uProjection", "uViewport", "uPixelRatio", "uDistance",
-      "uSize", "uTime", "uClock", "uAmplitude", "uSeed", "uPointer", "uRipples", "uColor", "uOpacity"]) {
+      "uSize", "uTime", "uClock", "uAmplitude", "uSeed", "uPointer", "uRipples", "uColor", "uOpacity", "uTyped", "uSplat"]) {
       u[name] = gl.getUniformLocation(program, name);
     }
     applyGrid();
@@ -291,9 +360,10 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   }
 
   function resize() {
+    if (destroyed) return;
     const w = canvas.clientWidth || 1;
     const h = canvas.clientHeight || 1;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = typed?.()?.scale || Math.min(window.devicePixelRatio || 1, 2);
     size = { w, h, dpr };
     canvas.width = Math.round(w * dpr);
     canvas.height = Math.round(h * dpr);
@@ -332,10 +402,21 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     gl.uniform3f(u.uPointer, pointer.x, pointer.y, pointer.strength);
     gl.uniform4fv(u.uRipples, ripples);
     gl.uniform3fv(u.uColor, color);
-    gl.uniform1f(u.uOpacity, now.opacity);
+    // Typed, the picture is drawn whole and the screen strikes it as
+    // faintly as the view asks (see frame).
+    const typing = !!typed?.();
+    gl.uniform1f(u.uOpacity, typing ? 1 : now.opacity);
+    gl.uniform1f(u.uTyped, typing ? 1 : 0);
+    // Typed, the picture is the light of the points summed (their splats
+    // add); shown, they lie over one another.
+    gl.blendFunc(gl.ONE, typing ? gl.ONE : gl.ONE_MINUS_SRC_ALPHA);
     gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.drawArrays(gl.POINTS, 0, count);
-    frames++;
+    // Only the rows that can be in sight (the points are stored a row
+    // after another, the far edge first, so those are one run of them,
+    // in the order they always had).
+    const [first, last] = rowsInSight();
+    gl.drawArrays(gl.POINTS, first * (grid.cols + 1), (last - first + 1) * (grid.cols + 1));
+    drawCount++;
     return true;
   }
 
@@ -360,6 +441,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       now.opacity = at(from.opacity, goal.opacity, RATE.opacity);
       now.seed[0] = at(from.seed[0], goal.seed[0], RATE.seed);
       now.seed[1] = at(from.seed[1], goal.seed[1], RATE.seed);
+      follow(); // (whatever comes next sets off from here, at rest)
       matrices = null;
       moving = true;
       if (x === 1) glide = null;
@@ -367,18 +449,23 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       glide = null; // over, or cut short: any remainder eases in from here
       let changed = false;
       for (const key of CAMERA_KEYS) {
-        const next = approach(camera[key], goal.camera[key], RATE.camera, dt);
-        if (Math.abs(next - camera[key]) > 1e-4) { camera[key] = next; changed = true; }
-        else camera[key] = goal.camera[key];
+        lead.camera[key] = approach(lead.camera[key], goal.camera[key], RATE.camera * EASE, dt);
+        const next = approach(camera[key], lead.camera[key], RATE.camera * EASE, dt);
+        if (Math.abs(next - camera[key]) > 1e-4 || !near(lead.camera[key], goal.camera[key], 0.01)) { camera[key] = next; changed = true; }
+        else camera[key] = lead.camera[key] = goal.camera[key];
         // The last tenth of a degree (or unit) drifts too slowly to need
         // every frame.
         moving ||= !near(camera[key], goal.camera[key], 0.1);
       }
       if (changed) matrices = null;
-      now.amplitude = approach(now.amplitude, goal.amplitude, RATE.amplitude, dt);
-      now.opacity = approach(now.opacity, goal.opacity, RATE.opacity, dt);
-      now.seed[0] = approach(now.seed[0], goal.seed[0], RATE.seed, dt);
-      now.seed[1] = approach(now.seed[1], goal.seed[1], RATE.seed, dt);
+      lead.amplitude = approach(lead.amplitude, goal.amplitude, RATE.amplitude * EASE, dt);
+      lead.opacity = approach(lead.opacity, goal.opacity, RATE.opacity * EASE, dt);
+      lead.seed[0] = approach(lead.seed[0], goal.seed[0], RATE.seed * EASE, dt);
+      lead.seed[1] = approach(lead.seed[1], goal.seed[1], RATE.seed * EASE, dt);
+      now.amplitude = approach(now.amplitude, lead.amplitude, RATE.amplitude * EASE, dt);
+      now.opacity = approach(now.opacity, lead.opacity, RATE.opacity * EASE, dt);
+      now.seed[0] = approach(now.seed[0], lead.seed[0], RATE.seed * EASE, dt);
+      now.seed[1] = approach(now.seed[1], lead.seed[1], RATE.seed * EASE, dt);
       moving ||= !near(now.amplitude, goal.amplitude, 0.005) || !near(now.opacity, goal.opacity, 0.005)
         || !near(now.seed[0], goal.seed[0], 0.005) || !near(now.seed[1], goal.seed[1], 0.005);
     }
@@ -389,10 +476,62 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       || (pointer.strength > 0.01 && !(near(pointer.x, pointer.tx, 0.5) && near(pointer.y, pointer.ty, 0.5)));
     for (let i = 0; i < RIPPLES && !moving; i++) {
       const age = clock - ripples[i * 4 + 2];
-      moving = ripples[i * 4 + 3] > 0 && age >= 0 && age < 3.2;
+      moving = ripples[i * 4 + 3] > 0 && age >= 0 && age < RIPPLE_LIFE;
     }
     return moving;
   }
+
+  /** The rows of the plane that can be in sight just now, as [first,
+      last] (row 0 is the far edge), for the camera as it stands and the
+      most the surface can rise or sink at this moment (see WAVE_MOST). A
+      point of the plane `s` along its depth from where the camera looks,
+      at height `h`, lands at f (h cos e + s sin e) / (D + s cos e - h sin e)
+      of the band's half-height above its middle (e: the elevation, D: the
+      distance, f: the lens). That moves one way only as `s` or `h` grows,
+      so over a row (its span of `s`, every height it can have) it is
+      furthest up and down at the four corners. A row is out of sight when
+      all four are past the same edge; anything not plainly so is drawn. */
+  function rowsInSight() {
+    const e = (camera.elevation * Math.PI) / 180;
+    const sin = Math.sin(e), cos = Math.cos(e);
+    const D = camera.distance, f = matrices.f;
+    let ring = 0;
+    for (let i = 0; i < RIPPLES; i++) {
+      const age = clock - ripples[i * 4 + 2];
+      if (ripples[i * 4 + 3] > 0 && age > -0.1 && age < RIPPLE_LIFE + 0.1) ring += ripples[i * 4 + 3] * Math.exp(-RIPPLE_FADE * Math.max(age, 0));
+    }
+    // (Rounded up to half a unit. The pointer's lift nears its full height
+    // for seconds on end, a hair a frame, and a ripple dies away as
+    // slowly: a bound that followed them would have every row looked at
+    // again on every frame. A little more is a bound still.)
+    const most = Math.ceil((WAVE_MOST * Math.abs(now.amplitude) + LIFT * Math.max(pointer.strength, 0) + RING * ring + 1) * 2) / 2;
+    // (So at rest, and under a pointer that stays on the band, nothing
+    // this rests on changes from one frame to the next: the answer stands.)
+    if (seen.e === e && seen.D === D && seen.target === camera.target && seen.f === f && seen.most === most && seen.rows === grid.rows) return sight;
+    Object.assign(seen, { e, D, target: camera.target, f, most, rows: grid.rows });
+    const span = PLANE.far - PLANE.near;
+    // Where a point lands (see above), or NaN at the camera or behind it.
+    const lands = (s, h) => {
+      const depth = D + s * cos - h * sin;
+      return depth > 1 ? (f * (h * cos + s * sin)) / depth : NaN;
+    };
+    const inSight = (row) => {
+      const far = PLANE.far - (span * (row - 0.5)) / grid.rows + camera.target;
+      const near = PLANE.far - (span * (row + 0.5)) / grid.rows + camera.target;
+      const a = lands(far, -most), b = lands(far, most), c = lands(near, -most), d = lands(near, most);
+      // (A corner that can't be placed compares false both times: in sight.)
+      return !((a > SIGHT_MARGIN && b > SIGHT_MARGIN && c > SIGHT_MARGIN && d > SIGHT_MARGIN)
+        || (a < -SIGHT_MARGIN && b < -SIGHT_MARGIN && c < -SIGHT_MARGIN && d < -SIGHT_MARGIN));
+    };
+    let first = 0, last = grid.rows;
+    while (first < last && !inSight(first)) first++;
+    while (last > first && !inSight(last)) last--;
+    sight[0] = first;
+    sight[1] = last;
+    return sight;
+  }
+  const sight = [0, 0]; // (the answer, kept: asked for every frame)
+  const seen = { e: NaN, D: 0, target: 0, f: 0, most: 0, rows: 0 }; // (and what it was worked out for)
 
   // While anything moves, draw every frame, in step with the page's own
   // animations; at rest the wave is slow enough to draw at most ~105 times
@@ -400,9 +539,9 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   const MIN_FRAME = 1 / 105;
 
   function schedule() {
-    if (scheduled) return;
+    if (scheduled || broken || paused) return;
     scheduled = true;
-    requestAnimationFrame(frame);
+    raf = frames.request(frame);
   }
 
   function frame(t) {
@@ -411,7 +550,7 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     schedule();
     if (lost) return;
     // A couple of frames after the first draw, the GPU has run it.
-    if (frames && warming && --warming === 0) firstFrame();
+    if (drawCount && warming && --warming === 0) firstFrame();
     const elapsed = last ? (t - last) / 1000 : 1 / 60;
     if (resting && elapsed < MIN_FRAME) return;
     const dt = Math.min(elapsed, 0.1);
@@ -423,10 +562,12 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       watchFrameRate(dt);
     }
     // Nothing to show: skip the draw (e.g. behind a full-screen sheet).
-    if (now.opacity < 0.002 && goal.opacity === 0 && frames > 0) return;
-    if (still && frames > 0 && !dirty) return;
+    if (now.opacity < 0.002 && goal.opacity === 0 && drawCount > 0) return;
+    if (still && drawCount > 0 && !dirty) return;
     dirty = false;
-    draw();
+    try {
+      if (draw()) frames.drawn(now.opacity);
+    } catch (error) { stopped(error); }
   }
 
   /** Jump every animated property to its target (reduced motion). */
@@ -435,8 +576,18 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
     now.amplitude = goal.amplitude;
     now.opacity = goal.opacity;
     now.seed = [...goal.seed];
+    follow();
     matrices = null;
     dirty = true;
+  }
+
+  /** The leads stand where their properties are (nothing is in motion). */
+  function follow() {
+    Object.assign(lead.camera, camera);
+    lead.amplitude = now.amplitude;
+    lead.opacity = now.opacity;
+    lead.seed[0] = now.seed[0];
+    lead.seed[1] = now.seed[1];
   }
 
   let firstFrame;
@@ -445,24 +596,72 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
   let broken = false;
   let paused = false;
   let scheduled = false;
+  let destroyed = false;
+  let raf = 0;
   const ready = new Promise((resolve) => (firstFrame = resolve));
 
-  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); lost = true; });
-  canvas.addEventListener("webglcontextrestored", () => { lost = false; init(); dirty = true; });
-  init();
-  resize();
-  new ResizeObserver(resize).observe(canvas);
-  schedule();
+  function stopped(error) {
+    if (broken) return;
+    broken = true;
+    frames.cancel(raf);
+    scheduled = false;
+    firstFrame();
+    onError(error);
+  }
+
+  function destroy() {
+    if (destroyed) return;
+    destroyed = broken = true;
+    frames.cancel(raf);
+    scheduled = false;
+    observer.disconnect();
+    listening.abort();
+    try {
+      if (!gl.isContextLost()) {
+        gl.deleteBuffer(buffer);
+        pipeline?.dispose();
+      }
+    } finally {
+      try { gl.getExtension("WEBGL_lose_context")?.loseContext(); }
+      finally { firstFrame(); } // a cancelled mount must not leave ready pending
+    }
+  }
+
+  const listening = new AbortController(); // destroy() takes the listeners off
+  canvas.addEventListener("webglcontextlost", (e) => { e.preventDefault(); lost = true; }, { signal: listening.signal });
+  canvas.addEventListener("webglcontextrestored", () => {
+    if (destroyed) return;
+    try { lost = false; init(); dirty = true; } catch (error) { stopped(error); }
+  }, { signal: listening.signal });
+  const observer = new ResizeObserver(resize);
+  try {
+    init();
+    resize();
+    observer.observe(canvas);
+    schedule();
+  } catch (error) {
+    destroy();
+    throw error;
+  }
 
   return {
     ready,
+    resize,
+
+    /** Stops the field for good: no more frames, observer or listeners,
+        and its buffer, program and WebGL context are released. */
+    destroy,
 
     /** Stops drawing (e.g. while something opaque covers the field); the
         wave picks up where it left off when resumed. */
     pause(on) {
+      if (destroyed) return;
       if (paused === on) return;
       paused = on;
-      if (!on) {
+      if (on) {
+        frames.cancel(raf);
+        scheduled = false;
+      } else {
         last = 0;
         schedule();
       }
@@ -472,17 +671,26 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
         Each property eases in at its own rate; `along` a running animation
         (a Web Animation, e.g. a CSS transition) the glide keeps that
         animation's clock instead, arriving exactly as it ends. A later call
-        that changes the framing takes over from wherever it is. */
-    set({ shot, amplitude, opacity, seed } = {}, { along } = {}) {
+        that changes the framing takes over from wherever it is; `settle`
+        jumps straight to it (a field brought back mid-visit starts where
+        the page is), and `cut` (["seed"]) jumps just those properties (the
+        typed screen turns the picture over instead: js/ascii.js). */
+    set({ shot, amplitude, opacity, seed } = {}, { along, settle: jump = false, cut = [] } = {}) {
       const before = JSON.stringify(goal);
       if (shot) goal.camera = { ...SHOTS[shot] };
       if (amplitude !== undefined) goal.amplitude = amplitude;
       if (opacity !== undefined) goal.opacity = opacity;
       if (seed) goal.seed = [...seed];
       resting = false;
-      if (still) settle();
+      if (still || jump) settle();
       else if (along) glide = { along, from: { camera: { ...camera }, amplitude: now.amplitude, opacity: now.opacity, seed: [...now.seed] } };
       else if (JSON.stringify(goal) !== before) glide = null;
+      if (cut.includes("seed")) {
+        now.seed = [...goal.seed];
+        lead.seed = [...goal.seed];
+        if (glide) glide.from.seed = [...goal.seed];
+        dirty = true;
+      }
     },
 
     setTheme(name) {
@@ -491,13 +699,17 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       resting = false;
     },
 
-    /** Pointer position in canvas CSS px; `active` false lets the lift fade. */
+    /** Pointer position in canvas CSS px; `active` false lets the lift
+        fade where it is (the position that comes with it is ignored: on
+        leaving the page it is the corner). */
     pointer(x, y, active) {
       const target = active && !still ? 1 : 0;
-      if (x !== pointer.tx || y !== pointer.ty || target !== pointer.target) resting = false;
-      if (pointer.target === 0 && active) { pointer.x = x; pointer.y = y; }
-      pointer.tx = x;
-      pointer.ty = y;
+      if (target !== pointer.target || (active && (x !== pointer.tx || y !== pointer.ty))) resting = false;
+      if (active) {
+        if (pointer.target === 0) { pointer.x = x; pointer.y = y; }
+        pointer.tx = x;
+        pointer.ty = y;
+      }
       pointer.target = target;
     },
 
@@ -518,8 +730,39 @@ export function createField(canvas, { theme = "dark", still = false, dense = tru
       if (py < PLANE.near || py > PLANE.far || Math.abs(px) > halfWidth) return null;
       return { x: px, y: py, height: waveHeight(px, py, time, now.seed) * now.amplitude };
     },
+  };
+}
 
-    stats: () => ({ points: count, cols: grid.cols + 1, rows: grid.rows + 1, time, frames }),
+/** The field as one of the band's backgrounds (js/background.js lists the
+    interface they share): drawn on `canvas`, or on a new canvas added to
+    `container`. */
+export function mount(container, { canvas, ...options } = {}) {
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.className = "field";
+    container.append(canvas);
+  }
+  let field;
+  try { field = createField(canvas, options); }
+  catch (error) {
+    canvas.remove();
+    throw error;
+  }
+  return {
+    canvas,
+    ready: field.ready,
+    set: field.set,
+    setTheme: field.setTheme,
+    resize: field.resize,
+    setPointer: field.pointer,
+    ripple: field.ripple,
+    sample: field.sample,
+    pause: () => field.pause(true),
+    resume: () => field.pause(false),
+    destroy() {
+      try { field.destroy(); }
+      finally { canvas.remove(); }
+    },
   };
 }
 
@@ -632,6 +875,10 @@ function compile(gl, vertexSource, fragmentSource) {
     check() {
       if (gl.getProgramParameter(program, gl.LINK_STATUS)) return program;
       throw new Error(shaders.map((s) => gl.getShaderInfoLog(s)).join("\n") + gl.getProgramInfoLog(program));
+    },
+    dispose() {
+      for (const shader of shaders) gl.deleteShader(shader);
+      gl.deleteProgram(program);
     },
   };
 }
